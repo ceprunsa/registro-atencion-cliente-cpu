@@ -72,7 +72,7 @@ function Dashboard() {
         { header: "Cliente", key: "cliente", width: 25 },
         { header: "Vínculo", key: "vinculo", width: 20 },
         { header: "Medio", key: "medio", width: 15 },
-        { header: "Detalle Medio", key: "detalleMedio", width: 20 },
+        { header: "Detalle del Medio", key: "detalleMedio", width: 25 },
         { header: "Estado", key: "estado", width: 12 },
         { header: "Tipo Consulta", key: "tipoConsulta", width: 30 },
         { header: "Oficina Derivada", key: "oficinaDerivada", width: 20 },
@@ -108,7 +108,7 @@ function Dashboard() {
           cliente: report.cliente || "",
           vinculo: report.vinculo_cliente_postulante || "",
           medio: report.medio || "",
-          detalleMedio: report.detalle_medio || "",
+          detalleMedio: report.medio_comunicacion || "",
           estado: report.estado === "atendido" ? "Atendido" : "Derivado",
           tipoConsulta: Array.isArray(report.tipo_consulta)
             ? report.tipo_consulta.join(", ")
@@ -217,7 +217,7 @@ function Dashboard() {
             <button
               onClick={() => exportToExcel(filteredReports)}
               disabled={filteredReports.length === 0 || exporting}
-              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-900 bg-white border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="inline-flex items-center justify-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm text-gray-900 bg-white border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               title="Exportar a Excel"
             >
               {exporting ? (

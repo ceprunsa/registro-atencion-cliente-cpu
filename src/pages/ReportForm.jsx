@@ -24,6 +24,10 @@ const MEDIO_OPTIONS = [
   { value: "Presencial", label: "Presencial" },
   { value: "Telefónico", label: "Telefónico" },
   { value: "Correo", label: "Correo" },
+  { value: "WhatsApp", label: "WhatsApp" },
+  { value: "Facebook", label: "Facebook" },
+  { value: "Instagram", label: "Instagram" },
+  { value: "Otro", label: "Otro" },
 ];
 
 const ESTADO_OPTIONS = [
@@ -92,11 +96,10 @@ function ReportForm() {
     vinculo_cliente_postulante: "Postulante",
     vinculo_otro: "",
     medio: "Presencial",
-    detalle_medio: "",
+    medio_comunicacion: "",
     estado: "atendido",
     tipo_consulta: [],
     oficina_derivada: "",
-    resultado_derivacion: "",
     resultado_final: "",
   });
 
@@ -114,11 +117,10 @@ function ReportForm() {
           reportData.vinculo_cliente_postulante || "Postulante",
         vinculo_otro: reportData.vinculo_otro || "",
         medio: reportData.medio || "Presencial",
-        detalle_medio: reportData.detalle_medio || "",
+        medio_comunicacion: reportData.medio_comunicacion || "",
         estado: reportData.estado || "atendido",
         tipo_consulta: reportData.tipo_consulta || [],
         oficina_derivada: reportData.oficina_derivada || "",
-        resultado_derivacion: reportData.resultado_derivacion || "",
         resultado_final: reportData.resultado_final || "",
       });
     }
@@ -182,6 +184,11 @@ function ReportForm() {
       !formData.vinculo_otro
     ) {
       newErrors.vinculo_otro = "Debe especificar el vínculo";
+    }
+
+    if (!formData.medio_comunicacion.trim()) {
+      newErrors.medio_comunicacion =
+        "Debe especificar el detalle del medio de comunicación";
     }
 
     setErrors(newErrors);
@@ -406,6 +413,59 @@ function ReportForm() {
               </h2>
             </div>
 
+            <div className="sm:col-span-6">
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Consulta <span className="text-red-500">*</span>
+                </legend>
+                <div
+                  className={`mt-2 grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-md border ${
+                    errors.tipo_consulta
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-200 bg-gray-50"
+                  }`}
+                  aria-invalid={errors.tipo_consulta ? "true" : "false"}
+                  aria-describedby={
+                    errors.tipo_consulta ? "tipo-consulta-error" : undefined
+                  }
+                >
+                  {TIPO_CONSULTA_OPTIONS.map((option) => (
+                    <div key={option.value} className="flex items-start">
+                      <div className="flex items-center h-5">
+                        <input
+                          id={`tipo_${option.value}`}
+                          name="tipo_consulta"
+                          type="checkbox"
+                          value={option.value}
+                          checked={formData.tipo_consulta.includes(
+                            option.value
+                          )}
+                          onChange={handleCheckboxChange}
+                          className="h-4 w-4 text-ceprunsa-mustard border-gray-300 rounded focus:ring-ceprunsa-mustard focus:ring-offset-0 focus:outline-none transition-colors duration-200"
+                        />
+                      </div>
+                      <div className="ml-3 text-sm">
+                        <label
+                          htmlFor={`tipo_${option.value}`}
+                          className="font-medium text-gray-700"
+                        >
+                          {option.label}
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {errors.tipo_consulta && (
+                  <p
+                    className="mt-1 text-sm text-red-600"
+                    id="tipo-consulta-error"
+                  >
+                    {errors.tipo_consulta}
+                  </p>
+                )}
+              </fieldset>
+            </div>
+
             <div className="sm:col-span-3">
               <label
                 htmlFor="medio"
@@ -431,28 +491,36 @@ function ReportForm() {
               </div>
             </div>
 
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-6">
               <label
-                htmlFor="detalle_medio"
+                htmlFor="medio_comunicacion"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Detalle del Medio
+                Detalle del medio de comunicación{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  name="detalle_medio"
-                  id="detalle_medio"
-                  value={formData.detalle_medio}
+                  name="medio_comunicacion"
+                  id="medio_comunicacion"
+                  value={formData.medio_comunicacion}
                   onChange={handleChange}
                   placeholder={
                     formData.medio === "Telefónico"
                       ? "Número telefónico"
                       : formData.medio === "Correo"
-                      ? "Dirección de correo"
-                      : "Detalles adicionales"
+                      ? "Dirección de correo electrónico"
+                      : formData.medio === "WhatsApp"
+                      ? "Número de WhatsApp"
+                      : formData.medio === "Facebook"
+                      ? "Perfil o página de Facebook"
+                      : formData.medio === "Instagram"
+                      ? "Cuenta de Instagram"
+                      : "Detalles del medio de comunicación"
                   }
                   className="shadow-sm block w-full px-4 py-2.5 sm:text-sm border-gray-300 rounded-md focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none transition-colors duration-200"
+                  required
                 />
               </div>
             </div>
@@ -525,81 +593,6 @@ function ReportForm() {
                       {errors.oficina_derivada}
                     </p>
                   )}
-                </div>
-              </div>
-            )}
-
-            <div className="sm:col-span-6">
-              <fieldset>
-                <legend className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Consulta <span className="text-red-500">*</span>
-                </legend>
-                <div
-                  className={`mt-2 grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-md border ${
-                    errors.tipo_consulta
-                      ? "border-red-300 bg-red-50"
-                      : "border-gray-200 bg-gray-50"
-                  }`}
-                  aria-invalid={errors.tipo_consulta ? "true" : "false"}
-                  aria-describedby={
-                    errors.tipo_consulta ? "tipo-consulta-error" : undefined
-                  }
-                >
-                  {TIPO_CONSULTA_OPTIONS.map((option) => (
-                    <div key={option.value} className="flex items-start">
-                      <div className="flex items-center h-5">
-                        <input
-                          id={`tipo_${option.value}`}
-                          name="tipo_consulta"
-                          type="checkbox"
-                          value={option.value}
-                          checked={formData.tipo_consulta.includes(
-                            option.value
-                          )}
-                          onChange={handleCheckboxChange}
-                          className="h-4 w-4 text-ceprunsa-mustard border-gray-300 rounded focus:ring-ceprunsa-mustard focus:ring-offset-0 focus:outline-none transition-colors duration-200"
-                        />
-                      </div>
-                      <div className="ml-3 text-sm">
-                        <label
-                          htmlFor={`tipo_${option.value}`}
-                          className="font-medium text-gray-700"
-                        >
-                          {option.label}
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {errors.tipo_consulta && (
-                  <p
-                    className="mt-1 text-sm text-red-600"
-                    id="tipo-consulta-error"
-                  >
-                    {errors.tipo_consulta}
-                  </p>
-                )}
-              </fieldset>
-            </div>
-
-            {formData.estado === "derivado" && (
-              <div className="sm:col-span-6">
-                <label
-                  htmlFor="resultado_derivacion"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Resultado de la Derivación
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="resultado_derivacion"
-                    name="resultado_derivacion"
-                    rows={3}
-                    value={formData.resultado_derivacion}
-                    onChange={handleChange}
-                    className="shadow-sm block w-full px-4 py-2.5 sm:text-sm border-gray-300 rounded-md focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none transition-colors duration-200"
-                    placeholder="Describa el resultado de la derivación..."
-                  />
                 </div>
               </div>
             )}

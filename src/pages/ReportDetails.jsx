@@ -103,12 +103,12 @@ function ReportDetails() {
               <dd className="mt-1 text-sm text-gray-900">{report.medio}</dd>
             </div>
 
-            <div className="sm:col-span-1">
+            <div className="sm:col-span-2">
               <dt className="text-sm font-medium text-gray-500">
-                Detalle del Medio
+                Detalle del Medio de Comunicación
               </dt>
               <dd className="mt-1 text-sm text-gray-900">
-                {report.detalle_medio || "No especificado"}
+                {report.medio_comunicacion || "No especificado"}
               </dd>
             </div>
 
@@ -158,17 +158,6 @@ function ReportDetails() {
                 </ul>
               </dd>
             </div>
-
-            {report.estado === "derivado" && (
-              <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">
-                  Resultado de la Derivación
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
-                  {report.resultado_derivacion || "No especificado"}
-                </dd>
-              </div>
-            )}
 
             <div className="sm:col-span-2">
               <dt className="text-sm font-medium text-gray-500">
