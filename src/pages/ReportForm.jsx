@@ -491,7 +491,7 @@ function ReportForm() {
               </div>
             </div>
 
-            <div className="sm:col-span-6">
+            <div className="sm:col-span-3">
               <label
                 htmlFor="medio_comunicacion"
                 className="block text-sm font-medium text-gray-700 mb-1"
@@ -519,9 +519,28 @@ function ReportForm() {
                       ? "Cuenta de Instagram"
                       : "Detalles del medio de comunicación"
                   }
-                  className="shadow-sm block w-full px-4 py-2.5 sm:text-sm border-gray-300 rounded-md focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none transition-colors duration-200"
+                  className={`shadow-sm block w-full px-4 py-2.5 sm:text-sm rounded-md transition-colors duration-200
+                    ${
+                      errors.medio_comunicacion
+                        ? "border-red-300 focus:ring-red-500 focus:border-red-500 focus:outline-none"
+                        : "border-gray-300 focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none"
+                    }`}
+                  aria-invalid={errors.medio_comunicacion ? "true" : "false"}
+                  aria-describedby={
+                    errors.medio_comunicacion
+                      ? "medio-comunicacion-error"
+                      : undefined
+                  }
                   required
                 />
+                {errors.medio_comunicacion && (
+                  <p
+                    className="mt-1 text-sm text-red-600"
+                    id="medio-comunicacion-error"
+                  >
+                    {errors.medio_comunicacion}
+                  </p>
+                )}
               </div>
             </div>
 

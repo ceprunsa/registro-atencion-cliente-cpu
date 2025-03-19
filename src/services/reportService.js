@@ -110,12 +110,10 @@ export async function updateReport(reportId, reportData) {
 // Obtener un informe por ID
 export async function getReportById(reportId) {
   try {
-    console.log("Obteniendo informe con ID:", reportId);
     const reportRef = doc(db, REPORTS_COLLECTION, reportId);
     const reportSnap = await getDoc(reportRef);
 
     if (reportSnap.exists()) {
-      console.log("Informe encontrado:", reportSnap.data());
       return { id: reportSnap.id, ...reportSnap.data() };
     } else {
       console.error("Informe no encontrado");
@@ -130,7 +128,6 @@ export async function getReportById(reportId) {
 // Obtener todos los informes
 export async function getAllReports() {
   try {
-    console.log("Obteniendo todos los informes");
     const q = query(
       collection(db, REPORTS_COLLECTION),
       orderBy("created_at", "desc")
@@ -142,7 +139,6 @@ export async function getAllReports() {
       ...doc.data(),
     }));
 
-    console.log(`Se encontraron ${reports.length} informes`);
     return reports;
   } catch (error) {
     console.error("Error al obtener informes:", error);

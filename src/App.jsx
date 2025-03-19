@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   createBrowserRouter,
   RouterProvider,
@@ -70,7 +70,6 @@ const authLoader = async () => {
 const reportsLoader = async () => {
   try {
     const reports = await getAllReports();
-    console.log("Informes cargados:", reports);
     return reports;
   } catch (error) {
     console.error("Error al cargar informes:", error);
@@ -84,7 +83,6 @@ const reportsLoader = async () => {
 const reportLoader = async ({ params }) => {
   try {
     const report = await getReportById(params.id);
-    console.log("Informe cargado:", report);
     return report;
   } catch (error) {
     console.error("Error al cargar informe:", error);
@@ -163,7 +161,7 @@ const createRouter = () => {
 
 function App() {
   // Creamos el router una sola vez para evitar recreaciones durante la hidratación
-  const router = React.useMemo(() => createRouter(), []);
+  const router = useMemo(() => createRouter(), []);
 
   return (
     <AuthProvider>

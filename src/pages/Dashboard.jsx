@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link, useLoaderData } from "react-router-dom";
+import { Link, useLoaderData, useNavigate } from "react-router-dom";
 import {
   FileText,
   Eye,
@@ -9,6 +9,7 @@ import {
   Search,
   PlusCircle,
   FileSpreadsheet,
+  FileDown,
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -18,6 +19,7 @@ function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Simular un pequeño retraso para mostrar el estado de carga
@@ -49,6 +51,11 @@ function Dashboard() {
     }
 
     return "Fecha no disponible";
+  };
+
+  // Función para descargar PDF (navega a la página de detalles con parámetro para descargar)
+  const handleDownloadPDF = (reportId) => {
+    navigate(`/reports/${reportId}?download=true`);
   };
 
   // Nueva función para exportar a Excel usando ExcelJS
@@ -300,7 +307,7 @@ function Dashboard() {
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <p className="text-sm font-medium text-ceprunsa-red truncate">
+                      <p className="text-sm font-medium  truncate">
                         {report.nro_consulta}
                       </p>
                       <div className="ml-2 flex-shrink-0 flex">
@@ -318,6 +325,14 @@ function Dashboard() {
                       </div>
                     </div>
                     <div className="ml-2 flex-shrink-0 flex">
+                      <button
+                        onClick={() => handleDownloadPDF(report.id)}
+                        className="mr-2 inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
+                        title="Descargar PDF"
+                      >
+                        <FileDown className="h-4 w-4 mr-1" />
+                        PDF
+                      </button>
                       <Link
                         to={`/reports/${report.id}`}
                         className="mr-2 inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
