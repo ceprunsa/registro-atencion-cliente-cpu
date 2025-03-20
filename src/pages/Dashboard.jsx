@@ -13,13 +13,19 @@ import {
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { getReportById } from "../services/reportService";
+import { generateReportPDF } from "../services/pdfService";
+import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 
 function Dashboard() {
   const reports = useLoaderData() || [];
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [downloadingReportId, setDownloadingReportId] = useState(null);
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   useEffect(() => {
     // Simular un pequeño retraso para mostrar el estado de carga
@@ -53,9 +59,40 @@ function Dashboard() {
     return "Fecha no disponible";
   };
 
-  // Función para descargar PDF (navega a la página de detalles con parámetro para descargar)
-  const handleDownloadPDF = (reportId) => {
-    navigate(`/reports/${reportId}?download=true`);
+  // Función para descargar PDF directamente
+  const handleDownloadPDF = async (reportId) => {
+    try {
+      setDownloadingPDF(true);
+      setDownloadingReportId(reportId);
+
+      // Obtener los datos completos del informe
+      const reportData = await getReportById(reportId);
+
+      // Generar y descargar el PDF
+      await generateReportPDF(reportData);
+
+      // Mostrar notificación de éxito
+      addToast({
+        type: TOAST_TYPES.SUCCESS,
+        message: `PDF del informe #${reportData.nro_consulta} generado correctamente.`,
+        duration: 3000,
+      });
+
+      setDownloadingPDF(false);
+      setDownloadingReportId(null);
+    } catch (error) {
+      console.error("Error al descargar el PDF:", error);
+
+      // Mostrar notificación de error
+      addToast({
+        type: TOAST_TYPES.ERROR,
+        message: `Error al generar el PDF: ${error.message}`,
+        duration: 5000,
+      });
+
+      setDownloadingPDF(false);
+      setDownloadingReportId(null);
+    }
   };
 
   // Nueva función para exportar a Excel usando ExcelJS
@@ -181,13 +218,26 @@ function Dashboard() {
       });
       saveAs(blob, `Reportes_CEPRUNSA_${date}.xlsx`);
 
+      // Mostrar notificación de éxito
+      addToast({
+        type: TOAST_TYPES.SUCCESS,
+        message: `Se exportaron ${reportsToExport.length} informes a Excel correctamente.`,
+        duration: 3000,
+      });
+
       setExporting(false);
     } catch (error) {
       console.error("Error al exportar a Excel:", error);
+
+      // Mostrar notificación de error
+      addToast({
+        type: TOAST_TYPES.ERROR,
+        message:
+          "Ocurrió un error al exportar los reportes. Por favor, inténtelo de nuevo.",
+        duration: 5000,
+      });
+
       setExporting(false);
-      alert(
-        "Ocurrió un error al exportar los reportes. Por favor, inténtelo de nuevo."
-      );
     }
   };
 
@@ -307,7 +357,7 @@ function Dashboard() {
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <p className="text-sm font-medium  truncate">
+                      <p className="text-sm font-medium text-ceprunsa-red truncate">
                         {report.nro_consulta}
                       </p>
                       <div className="ml-2 flex-shrink-0 flex">
@@ -327,10 +377,17 @@ function Dashboard() {
                     <div className="ml-2 flex-shrink-0 flex">
                       <button
                         onClick={() => handleDownloadPDF(report.id)}
-                        className="mr-2 inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
+                        disabled={
+                          downloadingPDF && downloadingReportId === report.id
+                        }
+                        className="mr-2 inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard disabled:opacity-50"
                         title="Descargar PDF"
                       >
-                        <FileDown className="h-4 w-4 mr-1" />
+                        {downloadingPDF && downloadingReportId === report.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-900 mr-1"></div>
+                        ) : (
+                          <FileDown className="h-4 w-4 mr-1" />
+                        )}
                         PDF
                       </button>
                       <Link

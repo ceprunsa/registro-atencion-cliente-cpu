@@ -10,8 +10,9 @@ import {
   useActionData,
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { createReport, updateReport } from "../services/reportService";
-import { Save, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Save, ArrowLeft } from "lucide-react";
 
 // Opciones para los campos de selección
 const VINCULO_OPTIONS = [
@@ -23,10 +24,9 @@ const VINCULO_OPTIONS = [
 const MEDIO_OPTIONS = [
   { value: "Presencial", label: "Presencial" },
   { value: "Telefónico", label: "Telefónico" },
+  { value: "Telefónico Fijo", label: "Telefónico Fijo" },
   { value: "Correo", label: "Correo" },
   { value: "WhatsApp", label: "WhatsApp" },
-  { value: "Facebook", label: "Facebook" },
-  { value: "Instagram", label: "Instagram" },
   { value: "Otro", label: "Otro" },
 ];
 
@@ -62,13 +62,22 @@ export async function action({ request, params }) {
       // Actualizar informe existente
       const result = await updateReport(params.id, data);
       console.log("Informe actualizado:", result);
-      return { success: true, message: "Informe actualizado correctamente." };
+      return {
+        success: true,
+        message: "Informe actualizado correctamente.",
+        isNew: false,
+      };
     } else {
       // Crear nuevo informe
       const userEmail = formData.get("userEmail");
       const result = await createReport(data, userEmail);
       console.log("Informe creado:", result);
-      return { success: true, message: "Informe creado correctamente." };
+      return {
+        success: true,
+        message: "Informe creado correctamente.",
+        isNew: true,
+        reportNumber: result.nro_consulta,
+      };
     }
   } catch (error) {
     console.error("Error en action:", error);
@@ -85,6 +94,7 @@ function ReportForm() {
   const { currentUser } = useAuth();
   const submit = useSubmit();
   const actionData = useActionData();
+  const { addToast } = useToast();
 
   // Obtener datos del informe si estamos editando
   const reportData = useLoaderData();
@@ -126,16 +136,39 @@ function ReportForm() {
     }
   }, [isEditing, reportData]);
 
-  // Redireccionar después de una acción exitosa
+  // Redireccionar después de una acción exitosa y mostrar notificación
   useEffect(() => {
     if (actionData?.success) {
       console.log("Acción exitosa, redirigiendo...");
-      setTimeout(() => {
-        navigate("/");
-      }, 1000);
+
+      // Mostrar notificación según el tipo de acción
+      if (actionData.isNew) {
+        addToast({
+          type: TOAST_TYPES.SUCCESS,
+          message: `Informe #${actionData.reportNumber} creado correctamente.`,
+          duration: 5000,
+        });
+      } else {
+        addToast({
+          type: TOAST_TYPES.SUCCESS,
+          message: "Informe actualizado correctamente.",
+          duration: 5000,
+        });
+      }
+
+      // Redirección inmediata sin retraso
+      navigate("/");
+    } else if (actionData && !actionData.success) {
+      // Mostrar notificación de error
+      addToast({
+        type: TOAST_TYPES.ERROR,
+        message: actionData.message,
+        duration: 5000,
+      });
     }
+
     setIsSubmitting(false);
-  }, [actionData, navigate]);
+  }, [actionData, navigate, addToast]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -201,6 +234,14 @@ function ReportForm() {
 
     if (!validateForm()) {
       setIsSubmitting(false);
+
+      // Mostrar notificación de error de validación
+      addToast({
+        type: TOAST_TYPES.WARNING,
+        message: "Por favor, complete todos los campos requeridos.",
+        duration: 5000,
+      });
+
       // Desplazar a la primera sección con error
       const firstErrorField = document.querySelector('[aria-invalid="true"]');
       if (firstErrorField) {
@@ -252,43 +293,6 @@ function ReportForm() {
           {isEditing ? "Editar Informe" : "Nuevo Informe"}
         </h1>
       </div>
-
-      {actionData && (
-        <div
-          className={`rounded-md ${
-            actionData.success
-              ? "bg-green-50 border border-green-200"
-              : "bg-red-50 border border-red-200"
-          } p-4 shadow-sm transition-all duration-300 animate-fadeIn`}
-          role="alert"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              {actionData.success ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-red-500" />
-              )}
-            </div>
-            <div className="ml-3">
-              <h3
-                className={`text-sm font-medium ${
-                  actionData.success ? "text-green-800" : "text-red-800"
-                }`}
-              >
-                {actionData.success ? "Éxito" : "Error"}
-              </h3>
-              <div
-                className={`mt-2 text-sm ${
-                  actionData.success ? "text-green-700" : "text-red-700"
-                }`}
-              >
-                <p>{actionData.message}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Form
         method="post"
@@ -509,14 +513,12 @@ function ReportForm() {
                   placeholder={
                     formData.medio === "Telefónico"
                       ? "Número telefónico"
+                      : formData.medio === "Telefónico Fijo"
+                      ? "Número telefónico fijo"
                       : formData.medio === "Correo"
                       ? "Dirección de correo electrónico"
                       : formData.medio === "WhatsApp"
                       ? "Número de WhatsApp"
-                      : formData.medio === "Facebook"
-                      ? "Perfil o página de Facebook"
-                      : formData.medio === "Instagram"
-                      ? "Cuenta de Instagram"
                       : "Detalles del medio de comunicación"
                   }
                   className={`shadow-sm block w-full px-4 py-2.5 sm:text-sm rounded-md transition-colors duration-200
