@@ -2,6 +2,7 @@
 
 import { Link, useLocation } from "react-router-dom";
 import { Home, PlusCircle, X } from "lucide-react";
+import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
 
 function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const location = useLocation();
@@ -32,7 +33,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
               <div className="flex items-center">
                 <img
                   className="h-10 w-auto"
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png"
+                  src={ceprunsalogo}
                   alt="CEPRUNSA Logo"
                 />
               </div>

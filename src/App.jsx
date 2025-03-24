@@ -8,8 +8,7 @@ import {
   useNavigate,
   useRouteError,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { ALLOWED_EMAILS } from "./contexts/AuthContext";
+import { AuthProvider, useAuth, ALLOWED_EMAILS } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -23,9 +22,7 @@ import { getAllReports, getReportById } from "./services/reportService";
 function ErrorBoundary() {
   const error = useRouteError();
   const navigate = useNavigate();
-
   console.error("Error en la aplicación:", error);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-ceprunsa-gray-light p-4">
       <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
@@ -52,11 +49,9 @@ const authLoader = async () => {
   const auth = JSON.parse(
     localStorage.getItem("auth") || '{"currentUser": null}'
   );
-
   if (!auth.currentUser) {
     return redirect("/login");
   }
-
   // Verificar si el correo está en la lista de permitidos
   if (!ALLOWED_EMAILS.includes(auth.currentUser.email)) {
     // Eliminar la información de autenticación
@@ -114,7 +109,6 @@ function AuthSync() {
       localStorage.removeItem("auth");
     }
   }, [currentUser]);
-
   return null;
 }
 

@@ -12,7 +12,6 @@ import { auth } from "../firebase/config";
 // Obtener la lista de correos permitidos desde variables de entorno
 const getAllowedEmails = () => {
   const allowedEmailsString = import.meta.env.VITE_ALLOWED_EMAILS || "";
-  // Dividir la cadena por comas y eliminar espacios en blanco
   return allowedEmailsString
     .split(",")
     .map((email) => email.trim())
@@ -39,11 +38,9 @@ export function AuthProvider({ children }) {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-
       // Verificar si el correo está en la lista de permitidos
       if (!ALLOWED_EMAILS.includes(result.user.email)) {
         console.log("Correo no permitido:", result.user.email);
-        console.log("Correos permitidos:", ALLOWED_EMAILS);
         await signOut(auth);
         setError("No tienes permiso para acceder a esta aplicación.");
         return false;
@@ -67,7 +64,6 @@ export function AuthProvider({ children }) {
         // Verificar si el correo está en la lista de permitidos
         if (!ALLOWED_EMAILS.includes(user.email)) {
           console.log("Correo no permitido:", user.email);
-          console.log("Correos permitidos:", ALLOWED_EMAILS);
           setError("No tienes permiso para acceder a esta aplicación.");
           await signOut(auth);
           setCurrentUser(null);
