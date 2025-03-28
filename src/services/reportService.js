@@ -40,7 +40,7 @@ async function generateConsultationNumber() {
     const lastNumberPart = Number.parseInt(lastNumber.split("-")[0]);
     const newNumberPart = (lastNumberPart + 1).toString().padStart(4, "0");
 
-    return `${newNumberPart}-${currentYear}`;
+    return `CPU-${newNumberPart}-${currentYear}`;
   } catch (error) {
     console.error("Error al generar número de consulta:", error);
     // En caso de error, generar un número basado en timestamp para evitar duplicados
