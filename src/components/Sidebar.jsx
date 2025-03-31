@@ -1,16 +1,27 @@
 "use client";
 
 import { Link, useLocation } from "react-router-dom";
-import { Home, PlusCircle, X } from "lucide-react";
+import { Home, PlusCircle, X, Users } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
 
 function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const location = useLocation();
+  const { currentUser, isAdmin } = useAuth();
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Nuevo Informe", href: "/reports/new", icon: PlusCircle },
   ];
+
+  // Agregar opción de administración de usuarios solo para administradores
+  if (isAdmin) {
+    navigation.push({
+      name: "Administrar Usuarios",
+      href: "/admin/users",
+      icon: Users,
+    });
+  }
 
   return (
     <>
@@ -79,9 +90,9 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
       <div className="hidden md:flex md:flex-shrink-0 border-r border-gray-200">
         <div className="flex flex-col w-64">
           <div className="flex flex-col h-0 flex-1 bg-white shadow-sm">
-            <div className="flex flex-col items-center h-16 px-4 text-white">
+            <div className="flex flex-col items-center h-16 px-4  text-white">
               <img
-                className="h-14 w-auto mt-2.5"
+                className="h-14 w-auto mt-2"
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png"
                 alt="CEPRUNSA Logo"
               />

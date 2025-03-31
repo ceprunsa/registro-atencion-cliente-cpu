@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { LogIn } from "lucide-react";
+import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
+import ceprunsalocal from "../assets/images/ceprunsa-local.jpg";
 
 function Login() {
   const { loginWithGoogle, currentUser, error } = useAuth();
@@ -28,8 +30,10 @@ function Login() {
       {/* Imagen de fondo con overlay */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ceprunsa_local.jpg-tvjSIp3Xsdn8VbWUt33iaQlu43IJa3.jpeg"
-          alt="CEPRUNSA Campus"
+          src={ceprunsalocal}
+          loading="lazy"
+          decoding="async"
+          alt="CEPRUNSA local"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-ceprunsa-mustard opacity-35"></div>
@@ -41,7 +45,7 @@ function Login() {
           <div className="flex flex-col items-center space-y-2">
             <img
               className="h-24 w-auto drop-shadow-md"
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png"
+              src={ceprunsalogo}
               alt="CEPRUNSA Logo"
             />
             <div className="h-0.5 w-16 bg-ceprunsa-mustard my-2"></div>

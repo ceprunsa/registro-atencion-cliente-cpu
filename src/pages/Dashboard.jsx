@@ -10,10 +10,12 @@ import {
   PlusCircle,
   FileSpreadsheet,
   FileDown,
+  Star,
 } from "lucide-react";
 import { getReportById } from "../services/reportService";
 import { generateReportPDF } from "../services/pdfService";
 import { exportReportsToExcel } from "../services/excelService";
+import { getRatingByReportId } from "../services/ratingService";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 
 function Dashboard() {
@@ -23,6 +25,7 @@ function Dashboard() {
   const [exporting, setExporting] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingReportId, setDownloadingReportId] = useState(null);
+  const [reportRatings, setReportRatings] = useState({});
   const navigate = useNavigate();
   const { addToast } = useToast();
 
@@ -33,6 +36,34 @@ function Dashboard() {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Cargar calificaciones para los informes
+  useEffect(() => {
+    async function loadRatings() {
+      const ratingsMap = {};
+
+      // Solo cargar calificaciones para los informes filtrados y visibles
+      for (const report of filteredReports) {
+        try {
+          const rating = await getRatingByReportId(report.id);
+          if (rating) {
+            ratingsMap[report.id] = rating;
+          }
+        } catch (error) {
+          console.error(
+            `Error al cargar calificación para informe ${report.id}:`,
+            error
+          );
+        }
+      }
+
+      setReportRatings(ratingsMap);
+    }
+
+    if (!loading && filteredReports.length > 0) {
+      loadRatings();
+    }
+  }, [loading, reports, searchTerm]);
 
   const filteredReports = reports.filter(
     (report) =>
@@ -121,6 +152,42 @@ function Dashboard() {
         setExporting(false);
       }
     );
+  };
+
+  // Función para obtener el texto de la calificación
+  const getRatingText = (ratingValue) => {
+    switch (ratingValue) {
+      case "muy_satisfecho":
+        return "Muy satisfecho";
+      case "satisfecho":
+        return "Satisfecho";
+      case "neutral":
+        return "Neutral";
+      case "insatisfecho":
+        return "Insatisfecho";
+      case "muy_insatisfecho":
+        return "Muy insatisfecho";
+      default:
+        return "No calificado";
+    }
+  };
+
+  // Función para obtener el color de la calificación
+  const getRatingColor = (ratingValue) => {
+    switch (ratingValue) {
+      case "muy_satisfecho":
+        return "bg-green-100 text-green-800";
+      case "satisfecho":
+        return "bg-green-50 text-green-700";
+      case "neutral":
+        return "bg-gray-100 text-gray-800";
+      case "insatisfecho":
+        return "bg-red-50 text-red-700";
+      case "muy_insatisfecho":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   if (loading) {
@@ -255,6 +322,20 @@ function Dashboard() {
                             : "Derivado"}
                         </p>
                       </div>
+
+                      {/* Mostrar calificación si existe */}
+                      {reportRatings[report.id] && (
+                        <div className="ml-2 flex-shrink-0 flex">
+                          <p
+                            className={`px-2 inline-flex items-center text-xs leading-5 rounded-full ${getRatingColor(
+                              reportRatings[report.id].rating
+                            )}`}
+                          >
+                            <Star className="h-3 w-3 mr-1" />
+                            {getRatingText(reportRatings[report.id].rating)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="ml-2 flex-shrink-0 flex">
                       <button
@@ -281,10 +362,17 @@ function Dashboard() {
                       </Link>
                       <Link
                         to={`/reports/${report.id}/edit`}
-                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
+                        className="mr-2 inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Editar
+                      </Link>
+                      <Link
+                        to={`/reports/${report.id}/rate`}
+                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
+                      >
+                        <Star className="h-4 w-4 mr-1" />
+                        {reportRatings[report.id] ? "Actualizar" : "Calificar"}
                       </Link>
                     </div>
                   </div>

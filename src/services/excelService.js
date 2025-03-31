@@ -1,6 +1,25 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { getRatingByReportId, RATING_VALUES } from "./ratingService";
 import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
+
+// Función para obtener el texto de la calificación
+const getRatingText = (ratingValue) => {
+  switch (ratingValue) {
+    case RATING_VALUES.VERY_SATISFIED:
+      return "Muy satisfecho";
+    case RATING_VALUES.SATISFIED:
+      return "Satisfecho";
+    case RATING_VALUES.NEUTRAL:
+      return "Neutral";
+    case RATING_VALUES.UNSATISFIED:
+      return "Insatisfecho";
+    case RATING_VALUES.VERY_UNSATISFIED:
+      return "Muy insatisfecho";
+    default:
+      return "No calificado";
+  }
+};
 
 // Función para exportar reportes a Excel
 export const exportReportsToExcel = async (reports, onSuccess, onError) => {
@@ -29,8 +48,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
 
       // Insertar el logo en la celda A1 con un tamaño específico
       worksheet.addImage(logoId, {
-        tl: { col: 0.5, row: 0 },
-        ext: { width: 175, height: 75 },
+        tl: { col: 0, row: 0 },
+        ext: { width: 100, height: 50 },
       });
     }
 
@@ -102,6 +121,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
       "Fecha",
       "Hora",
       "Responsable",
+      "Calificación",
+      "Comentarios",
     ]); // Fila 7
 
     // Configurar el ancho de las columnas
@@ -118,6 +139,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
       { key: "fecha", width: 12 },
       { key: "hora", width: 12 },
       { key: "responsable", width: 25 },
+      { key: "calificacion", width: 15 },
+      { key: "comentarios", width: 40 },
     ];
 
     // Estilo para el encabezado de datos
@@ -146,8 +169,24 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
       };
     });
 
+    // Obtener calificaciones para todos los informes
+    const ratingsMap = {};
+    for (const report of reports) {
+      try {
+        const rating = await getRatingByReportId(report.id);
+        if (rating) {
+          ratingsMap[report.id] = rating;
+        }
+      } catch (error) {
+        console.error(
+          `Error al cargar calificación para informe ${report.id}:`,
+          error
+        );
+      }
+    }
+
     // Añadir los datos
-    reports.forEach((report) => {
+    for (const report of reports) {
       // Formatear la fecha para Excel
       let fecha = "No disponible";
       let hora = "No disponible";
@@ -157,6 +196,13 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
         fecha = date.toLocaleDateString("es-PE");
         hora = date.toLocaleTimeString("es-PE");
       }
+
+      // Obtener calificación si existe
+      const rating = ratingsMap[report.id];
+      const calificacion = rating
+        ? getRatingText(rating.rating)
+        : "No calificado";
+      const comentarios = rating && rating.comments ? rating.comments : "";
 
       // Añadir fila
       const dataRow = worksheet.addRow({
@@ -174,6 +220,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
         fecha: fecha,
         hora: hora,
         responsable: report.responsable || "",
+        calificacion: calificacion,
+        comentarios: comentarios,
       });
 
       // Aplicar bordes a las celdas de datos
@@ -197,7 +245,54 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
           };
         });
       }
-    });
+
+      // Aplicar color especial a la celda de calificación según su valor
+      const calificacionCell = dataRow.getCell(13); // Columna de calificación
+      if (rating) {
+        switch (rating.rating) {
+          case RATING_VALUES.VERY_SATISFIED:
+            calificacionCell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "E6FFE6" }, // Verde claro
+            };
+            calificacionCell.font = { color: { argb: "006600" } };
+            break;
+          case RATING_VALUES.SATISFIED:
+            calificacionCell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "E6FFE6" }, // Verde claro
+            };
+            calificacionCell.font = { color: { argb: "006600" } };
+            break;
+          case RATING_VALUES.NEUTRAL:
+            calificacionCell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "F0F0F0" }, // Gris claro
+            };
+            calificacionCell.font = { color: { argb: "666666" } };
+            break;
+          case RATING_VALUES.UNSATISFIED:
+            calificacionCell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFEBEB" }, // Rojo claro
+            };
+            calificacionCell.font = { color: { argb: "CC0000" } };
+            break;
+          case RATING_VALUES.VERY_UNSATISFIED:
+            calificacionCell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFEBEB" }, // Rojo claro
+            };
+            calificacionCell.font = { color: { argb: "CC0000" } };
+            break;
+        }
+      }
+    }
 
     // Generar el archivo
     const buffer = await workbook.xlsx.writeBuffer();

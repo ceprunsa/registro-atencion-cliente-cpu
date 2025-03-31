@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getRatingByReportId } from "./ratingService";
 import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
 
 // Función para formatear la fecha de Firestore
@@ -20,10 +21,37 @@ export const formatDate = (timestamp) => {
   return "Fecha no disponible";
 };
 
+// Función para obtener el texto de la calificación
+export const getRatingText = (ratingValue) => {
+  switch (ratingValue) {
+    case "muy_satisfecho":
+      return "Muy satisfecho";
+    case "satisfecho":
+      return "Satisfecho";
+    case "neutral":
+      return "Neutral";
+    case "insatisfecho":
+      return "Insatisfecho";
+    case "muy_insatisfecho":
+      return "Muy insatisfecho";
+    default:
+      return "No calificado";
+  }
+};
+
 // Función para generar y descargar el PDF
 export const generateReportPDF = async (report) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      // Obtener la calificación del informe
+      let rating = null;
+      try {
+        rating = await getRatingByReportId(report.id);
+      } catch (error) {
+        console.error("Error al obtener calificación para PDF:", error);
+        // Continuamos sin la calificación
+      }
+
       // Crear un nuevo documento PDF
       const doc = new jsPDF({
         orientation: "portrait",
@@ -46,7 +74,7 @@ export const generateReportPDF = async (report) => {
 
         // Agregar el logo encima del fondo
         if (img) {
-          doc.addImage(img, "PNG", 10, 10, 34, 15);
+          doc.addImage(img, "PNG", 10, 10, 30, 15);
         }
 
         // Línea decorativa superior
@@ -190,9 +218,59 @@ export const generateReportPDF = async (report) => {
           alternateRowStyles: { fillColor: [252, 252, 252] },
         });
 
+        // Sección: Calificación del Cliente (si existe)
+        let finalY2 = doc.lastAutoTable.finalY + 15;
+
+        if (rating) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(...colorRojo);
+          doc.text("CALIFICACIÓN DEL CLIENTE", 15, finalY2);
+
+          // Línea decorativa bajo el título de sección
+          doc.setDrawColor(...colorAmarillo);
+          doc.setLineWidth(0.5);
+          doc.line(15, finalY2 + 3, 195, finalY2 + 3);
+
+          // Tabla de calificación
+          const ratingData = [["Calificación", getRatingText(rating.rating)]];
+
+          // Añadir comentarios si existen
+          if (rating.comments) {
+            ratingData.push(["Comentarios", rating.comments]);
+          }
+
+          autoTable(doc, {
+            startY: finalY2 + 10,
+            body: ratingData,
+            theme: "grid",
+            headStyles: {
+              fillColor: colorAmarillo,
+              textColor: [50, 50, 50],
+              fontStyle: "bold",
+              halign: "center",
+            },
+            styles: {
+              fontSize: 9,
+              cellPadding: 1,
+            },
+            columnStyles: {
+              0: {
+                fontStyle: "bold",
+                fillColor: [250, 250, 250],
+                cellWidth: 60,
+              },
+              1: { cellWidth: "auto" },
+            },
+            margin: { left: 15, right: 15 },
+            alternateRowStyles: { fillColor: [252, 252, 252] },
+          });
+
+          finalY2 = doc.lastAutoTable.finalY + 15;
+        }
+
         // Resultado final (si existe)
         if (report.resultado_final) {
-          const finalY2 = doc.lastAutoTable.finalY + 15;
           doc.setFont("helvetica", "bold");
           doc.setFontSize(12);
           doc.setTextColor(...colorRojo);

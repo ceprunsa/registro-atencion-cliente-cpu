@@ -8,18 +8,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { auth } from "../firebase/config";
-
-// Obtener la lista de correos permitidos desde variables de entorno
-const getAllowedEmails = () => {
-  const allowedEmailsString = import.meta.env.VITE_ALLOWED_EMAILS || "";
-  return allowedEmailsString
-    .split(",")
-    .map((email) => email.trim())
-    .filter((email) => email !== "");
-};
-
-// Lista de correos permitidos
-export const ALLOWED_EMAILS = getAllowedEmails();
+import { isEmailAllowed, isUserAdmin } from "../services/userService";
 
 const AuthContext = createContext();
 
@@ -32,24 +21,37 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isHydrated, setIsHydrated] = useState(false);
+  const [checkingPermission, setCheckingPermission] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function loginWithGoogle() {
     setError("");
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      // Verificar si el correo está en la lista de permitidos
-      if (!ALLOWED_EMAILS.includes(result.user.email)) {
+
+      // Verificar si el correo está en la lista de permitidos en Firebase
+      setCheckingPermission(true);
+      const isAllowed = await isEmailAllowed(result.user.email);
+
+      if (!isAllowed) {
         console.log("Correo no permitido:", result.user.email);
         await signOut(auth);
         setError("No tienes permiso para acceder a esta aplicación.");
+        setCheckingPermission(false);
         return false;
       }
+
+      // Verificar si el usuario es administrador
+      const adminStatus = await isUserAdmin(result.user.email);
+      setIsAdmin(adminStatus);
+      setCheckingPermission(false);
 
       return true;
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
       setError("Error al iniciar sesión con Google. Inténtalo de nuevo.");
+      setCheckingPermission(false);
       return false;
     }
   }
@@ -61,17 +63,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Verificar si el correo está en la lista de permitidos
-        if (!ALLOWED_EMAILS.includes(user.email)) {
+        // Verificar si el correo está en la lista de permitidos en Firebase
+        setCheckingPermission(true);
+        const isAllowed = await isEmailAllowed(user.email);
+
+        if (!isAllowed) {
           console.log("Correo no permitido:", user.email);
           setError("No tienes permiso para acceder a esta aplicación.");
           await signOut(auth);
           setCurrentUser(null);
+          setIsAdmin(false);
+          setCheckingPermission(false);
         } else {
+          // Verificar si el usuario es administrador
+          const adminStatus = await isUserAdmin(user.email);
           setCurrentUser(user);
+          setIsAdmin(adminStatus);
+          setCheckingPermission(false);
         }
       } else {
         setCurrentUser(null);
+        setIsAdmin(false);
+        setCheckingPermission(false);
       }
       setLoading(false);
       setIsHydrated(true);
@@ -82,10 +95,11 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser,
+    isAdmin,
     loginWithGoogle,
     logout,
     error,
-    loading,
+    loading: loading || checkingPermission,
   };
 
   return (

@@ -121,13 +121,20 @@ function ReportForm() {
   useEffect(() => {
     if (isEditing && reportData) {
       console.log("Cargando datos para edición:", reportData);
+
+      // Si el medio es Presencial pero no hay detalle, establecer el valor por defecto
+      let medio_comunicacion = reportData.medio_comunicacion || "";
+      if (reportData.medio === "Presencial" && !reportData.medio_comunicacion) {
+        medio_comunicacion = "Local del Ceprunsa";
+      }
+
       setFormData({
         cliente: reportData.cliente || "",
         vinculo_cliente_postulante:
           reportData.vinculo_cliente_postulante || "Postulante",
         vinculo_otro: reportData.vinculo_otro || "",
         medio: reportData.medio || "Presencial",
-        medio_comunicacion: reportData.medio_comunicacion || "",
+        medio_comunicacion: medio_comunicacion,
         estado: reportData.estado || "atendido",
         tipo_consulta: reportData.tipo_consulta || [],
         oficina_derivada: reportData.oficina_derivada || "",
@@ -170,9 +177,35 @@ function ReportForm() {
     setIsSubmitting(false);
   }, [actionData, navigate, addToast]);
 
+  // Modificar la función handleChange para establecer automáticamente "Local del Ceprunsa" cuando el medio es "Presencial"
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Si se está cambiando el medio, manejar el detalle del medio según corresponda
+    if (name === "medio") {
+      if (value === "Presencial") {
+        // Si es Presencial, establecer automáticamente "Local del Ceprunsa"
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          medio_comunicacion: "Local del Ceprunsa",
+        }));
+      } else {
+        // Para otros medios, limpiar el campo para que el usuario lo complete
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          medio_comunicacion: "",
+        }));
+      }
+
+      // Limpiar error si existía
+      if (errors.medio_comunicacion) {
+        setErrors((prev) => ({ ...prev, medio_comunicacion: null }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
 
     // Limpiar error cuando el usuario corrige el campo
     if (errors[name]) {

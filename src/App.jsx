@@ -8,21 +8,26 @@ import {
   useNavigate,
   useRouteError,
 } from "react-router-dom";
-import { AuthProvider, useAuth, ALLOWED_EMAILS } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ReportForm, { action as reportFormAction } from "./pages/ReportForm";
 import ReportDetails from "./pages/ReportDetails";
+import ReportRating from "./pages/ReportRating";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import { getAllReports, getReportById } from "./services/reportService";
+import { isEmailAllowed, isUserAdmin } from "./services/userService";
 
 // Componente para manejar errores
 function ErrorBoundary() {
   const error = useRouteError();
   const navigate = useNavigate();
+
   console.error("Error en la aplicación:", error);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-ceprunsa-gray-light p-4">
       <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
@@ -49,17 +54,37 @@ const authLoader = async () => {
   const auth = JSON.parse(
     localStorage.getItem("auth") || '{"currentUser": null}'
   );
+
   if (!auth.currentUser) {
     return redirect("/login");
   }
-  // Verificar si el correo está en la lista de permitidos
-  if (!ALLOWED_EMAILS.includes(auth.currentUser.email)) {
+
+  // Verificar si el correo está en la lista de permitidos en Firebase
+  const isAllowed = await isEmailAllowed(auth.currentUser.email);
+  if (!isAllowed) {
     // Eliminar la información de autenticación
     localStorage.removeItem("auth");
     return redirect("/login");
   }
 
   return auth.currentUser;
+};
+
+// Loader para verificar permisos de administrador
+const adminLoader = async () => {
+  const user = await authLoader();
+
+  if (!user) {
+    return redirect("/login");
+  }
+
+  // Verificar si el usuario es administrador
+  const adminStatus = await isUserAdmin(user.email);
+  if (!adminStatus) {
+    return redirect("/");
+  }
+
+  return user;
 };
 
 // Loader para obtener todos los informes
@@ -79,6 +104,7 @@ const reportsLoader = async () => {
 // Loader para obtener un informe específico
 const reportLoader = async ({ params }) => {
   try {
+    console.log("Cargando informe con ID:", params.id);
     const report = await getReportById(params.id);
     console.log("Informe cargado:", report);
     return report;
@@ -109,6 +135,7 @@ function AuthSync() {
       localStorage.removeItem("auth");
     }
   }, [currentUser]);
+
   return null;
 }
 
@@ -146,6 +173,16 @@ const createRouter = () => {
           element: <ReportForm />,
           loader: reportLoader,
           action: reportFormAction,
+        },
+        {
+          path: "reports/:id/rate",
+          element: <ReportRating />,
+          loader: reportLoader,
+        },
+        {
+          path: "admin/users",
+          element: <UserManagement />,
+          loader: adminLoader,
         },
       ],
     },

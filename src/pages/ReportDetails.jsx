@@ -6,16 +6,19 @@ import {
   Link,
   useSearchParams,
 } from "react-router-dom";
-import { ArrowLeft, Edit, FileDown } from "lucide-react";
+import { ArrowLeft, Edit, FileDown, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { generateReportPDF } from "../services/pdfService";
+import { getRatingByReportId } from "../services/ratingService";
 
 function ReportDetails() {
   const report = useLoaderData();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [downloading, setDownloading] = useState(false);
+  const [rating, setRating] = useState(null);
+  const [loadingRating, setLoadingRating] = useState(true);
   const { addToast } = useToast();
 
   // Verificar si se debe descargar automáticamente el PDF
@@ -29,6 +32,22 @@ function ReportDetails() {
       navigate(`/reports/${report.id}`, { replace: true });
     }
   }, [shouldDownload, report.id]);
+
+  // Cargar calificación si existe
+  useEffect(() => {
+    async function loadRating() {
+      try {
+        const existingRating = await getRatingByReportId(report.id);
+        setRating(existingRating);
+        setLoadingRating(false);
+      } catch (error) {
+        console.error("Error al cargar calificación:", error);
+        setLoadingRating(false);
+      }
+    }
+
+    loadRating();
+  }, [report.id]);
 
   // Función para formatear la fecha de Firestore
   const formatDate = (timestamp) => {
@@ -76,6 +95,42 @@ function ReportDetails() {
     }
   };
 
+  // Función para obtener el texto de la calificación
+  const getRatingText = (ratingValue) => {
+    switch (ratingValue) {
+      case "muy_satisfecho":
+        return "Muy satisfecho";
+      case "satisfecho":
+        return "Satisfecho";
+      case "neutral":
+        return "Neutral";
+      case "insatisfecho":
+        return "Insatisfecho";
+      case "muy_insatisfecho":
+        return "Muy insatisfecho";
+      default:
+        return "No calificado";
+    }
+  };
+
+  // Función para obtener el color de la calificación
+  const getRatingColor = (ratingValue) => {
+    switch (ratingValue) {
+      case "muy_satisfecho":
+        return "bg-green-100 text-green-800";
+      case "satisfecho":
+        return "bg-green-50 text-green-700";
+      case "neutral":
+        return "bg-gray-100 text-gray-800";
+      case "insatisfecho":
+        return "bg-red-50 text-red-700";
+      case "muy_insatisfecho":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -119,13 +174,45 @@ function ReportDetails() {
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Detalles del Informe
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Información completa del informe de atención.
-          </p>
+        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Detalles del Informe
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Información completa del informe de atención.
+            </p>
+          </div>
+
+          {/* Sección de calificación */}
+          {loadingRating ? (
+            <div className="animate-pulse h-8 w-32 bg-gray-200 rounded"></div>
+          ) : rating ? (
+            <div className="flex items-center">
+              <span
+                className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${getRatingColor(
+                  rating.rating
+                )}`}
+              >
+                <Star className="h-4 w-4 mr-1" />
+                {getRatingText(rating.rating)}
+              </span>
+              <Link
+                to={`/reports/${report.id}/rate`}
+                className="ml-2 text-sm text-ceprunsa-red hover:underline"
+              >
+                Actualizar
+              </Link>
+            </div>
+          ) : (
+            <Link
+              to={`/reports/${report.id}/rate`}
+              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-ceprunsa-red hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-red"
+            >
+              <Star className="h-4 w-4 mr-1" />
+              Calificar atención
+            </Link>
+          )}
         </div>
 
         <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
@@ -244,6 +331,27 @@ function ReportDetails() {
                 {report.resultado_final || "No especificado"}
               </dd>
             </div>
+
+            {/* Sección de calificación si existe */}
+            {rating && rating.comments && (
+              <>
+                <div className="sm:col-span-2">
+                  <dt className="text-base font-medium text-ceprunsa-red">
+                    Calificación del Cliente
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900 border-b border-gray-200 pb-3"></dd>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <dt className="text-sm font-medium text-gray-500">
+                    Comentarios
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line bg-gray-50 p-3 rounded-md">
+                    {rating.comments}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
         </div>
       </div>
