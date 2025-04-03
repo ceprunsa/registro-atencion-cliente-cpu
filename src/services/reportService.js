@@ -32,12 +32,12 @@ async function generateConsultationNumber() {
 
     if (querySnapshot.empty) {
       // No hay consultas para este año, comenzar desde 0001
-      return `0001-${currentYear}`;
+      return `CPU-0001-${currentYear}`;
     }
 
     // Obtener el último número y aumentarlo en 1
     const lastNumber = querySnapshot.docs[0].data().nro_consulta;
-    const lastNumberPart = Number.parseInt(lastNumber.split("-")[0]);
+    const lastNumberPart = Number.parseInt(lastNumber.split("-")[1]);
     const newNumberPart = (lastNumberPart + 1).toString().padStart(4, "0");
 
     return `CPU-${newNumberPart}-${currentYear}`;
@@ -52,7 +52,6 @@ async function generateConsultationNumber() {
 // Crear un nuevo informe
 export async function createReport(reportData, userEmail) {
   try {
-    console.log("Creando informe con datos:", reportData);
     const nroConsulta = await generateConsultationNumber();
 
     const newReport = {
@@ -65,7 +64,6 @@ export async function createReport(reportData, userEmail) {
     };
 
     const docRef = await addDoc(collection(db, REPORTS_COLLECTION), newReport);
-    console.log("Informe creado con ID:", docRef.id);
 
     // Devolvemos un objeto con los datos del informe y el ID
     return {
@@ -84,7 +82,6 @@ export async function createReport(reportData, userEmail) {
 // Actualizar un informe existente
 export async function updateReport(reportId, reportData) {
   try {
-    console.log("Actualizando informe con ID:", reportId, "Datos:", reportData);
     const reportRef = doc(db, REPORTS_COLLECTION, reportId);
 
     const updatedData = {
@@ -93,7 +90,6 @@ export async function updateReport(reportId, reportData) {
     };
 
     await updateDoc(reportRef, updatedData);
-    console.log("Informe actualizado correctamente");
 
     // Obtenemos el documento actualizado para devolverlo
     const updatedDoc = await getDoc(reportRef);
