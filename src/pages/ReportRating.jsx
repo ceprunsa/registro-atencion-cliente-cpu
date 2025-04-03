@@ -29,10 +29,8 @@ function ReportRating() {
   useEffect(() => {
     async function loadRating() {
       try {
-        console.log("Cargando calificación para el informe:", id);
         const existingRating = await getRatingByReportId(id);
         if (existingRating) {
-          console.log("Calificación encontrada:", existingRating);
           setRating(existingRating);
           setSelectedRating(existingRating.rating);
           setComments(existingRating.comments || "");
@@ -46,7 +44,6 @@ function ReportRating() {
             });
           }
         } else {
-          console.log("No se encontró calificación previa");
         }
         setLoading(false);
       } catch (error) {
@@ -92,7 +89,6 @@ function ReportRating() {
         updated: true,
       };
 
-      console.log("Guardando calificación:", ratingData);
       await saveRating(id, ratingData);
 
       addToast({

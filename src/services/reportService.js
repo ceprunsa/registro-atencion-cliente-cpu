@@ -15,15 +15,15 @@ import { db } from "../firebase/config";
 
 const REPORTS_COLLECTION = "reports";
 
-// Generar número de consulta (XXXX-YYYY)
+// Modificar la función generateConsultationNumber para usar el nuevo formato "CPU-001-2025"
 async function generateConsultationNumber() {
   const currentYear = new Date().getFullYear();
 
   // Obtener el último número de consulta para este año
   const q = query(
     collection(db, REPORTS_COLLECTION),
-    where("nro_consulta", ">=", `0001-${currentYear}`),
-    where("nro_consulta", "<=", `9999-${currentYear}`),
+    where("nro_consulta", ">=", `CPU-001-${currentYear}`),
+    where("nro_consulta", "<=", `CPU-999-${currentYear}`),
     orderBy("nro_consulta", "desc")
   );
 
@@ -31,21 +31,21 @@ async function generateConsultationNumber() {
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      // No hay consultas para este año, comenzar desde 0001
-      return `CPU-0001-${currentYear}`;
+      // No hay consultas para este año, comenzar desde 001
+      return `CPU-001-${currentYear}`;
     }
 
     // Obtener el último número y aumentarlo en 1
     const lastNumber = querySnapshot.docs[0].data().nro_consulta;
     const lastNumberPart = Number.parseInt(lastNumber.split("-")[1]);
-    const newNumberPart = (lastNumberPart + 1).toString().padStart(4, "0");
+    const newNumberPart = (lastNumberPart + 1).toString().padStart(3, "0");
 
     return `CPU-${newNumberPart}-${currentYear}`;
   } catch (error) {
     console.error("Error al generar número de consulta:", error);
     // En caso de error, generar un número basado en timestamp para evitar duplicados
-    const timestamp = Date.now().toString().slice(-4);
-    return `${timestamp}-${currentYear}`;
+    const timestamp = Date.now().toString().slice(-3);
+    return `CPU-${timestamp}-${currentYear}`;
   }
 }
 

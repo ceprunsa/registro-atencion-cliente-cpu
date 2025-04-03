@@ -52,8 +52,6 @@ export async function action({ request, params }) {
   const formData = await request.formData();
   const data = Object.fromEntries(formData);
 
-  console.log("Action ejecutada con datos:", data);
-
   // Convertir tipo_consulta de string a array
   data.tipo_consulta = formData.getAll("tipo_consulta");
 
@@ -61,7 +59,6 @@ export async function action({ request, params }) {
     if (params.id) {
       // Actualizar informe existente
       const result = await updateReport(params.id, data);
-      console.log("Informe actualizado:", result);
       return {
         success: true,
         message: "Informe actualizado correctamente.",
@@ -71,7 +68,6 @@ export async function action({ request, params }) {
       // Crear nuevo informe
       const userEmail = formData.get("userEmail");
       const result = await createReport(data, userEmail);
-      console.log("Informe creado:", result);
       return {
         success: true,
         message: "Informe creado correctamente.",
@@ -120,8 +116,6 @@ function ReportForm() {
   // Cargar datos si estamos editando
   useEffect(() => {
     if (isEditing && reportData) {
-      console.log("Cargando datos para edición:", reportData);
-
       // Si el medio es Presencial pero no hay detalle, establecer el valor por defecto
       let medio_comunicacion = reportData.medio_comunicacion || "";
       if (reportData.medio === "Presencial" && !reportData.medio_comunicacion) {
@@ -146,8 +140,6 @@ function ReportForm() {
   // Redireccionar después de una acción exitosa y mostrar notificación
   useEffect(() => {
     if (actionData?.success) {
-      console.log("Acción exitosa, redirigiendo...");
-
       // Mostrar notificación según el tipo de acción
       if (actionData.isNew) {
         addToast({
@@ -304,7 +296,6 @@ function ReportForm() {
       submitData.append("userEmail", currentUser.email);
     }
 
-    console.log("Enviando datos al servidor...");
     // Enviar formulario
     submit(submitData, {
       method: "post",
