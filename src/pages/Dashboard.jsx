@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Link, useLoaderData, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FileText,
   Eye,
@@ -15,55 +15,20 @@ import {
 import { getReportById } from "../services/reportService";
 import { generateReportPDF } from "../services/pdfService";
 import { exportReportsToExcel } from "../services/excelService";
-import { getRatingByReportId } from "../services/ratingService";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
+import { useReports } from "../hooks/useReports";
+import { useRating } from "../hooks/useRatings";
 
 function Dashboard() {
-  const reports = useLoaderData() || [];
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingReportId, setDownloadingReportId] = useState(null);
-  const [reportRatings, setReportRatings] = useState({});
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  useEffect(() => {
-    // Simular un pequeño retraso para mostrar el estado de carga
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Cargar calificaciones para los informes
-  useEffect(() => {
-    async function loadRatings() {
-      const ratingsMap = {};
-
-      // Solo cargar calificaciones para los informes filtrados y visibles
-      for (const report of filteredReports) {
-        try {
-          const rating = await getRatingByReportId(report.id);
-          if (rating) {
-            ratingsMap[report.id] = rating;
-          }
-        } catch (error) {
-          console.error(
-            `Error al cargar calificación para informe ${report.id}:`,
-            error
-          );
-        }
-      }
-
-      setReportRatings(ratingsMap);
-    }
-
-    if (!loading && filteredReports.length > 0) {
-      loadRatings();
-    }
-  }, [loading, reports, searchTerm]);
+  // Usar el hook de React Query para obtener los reportes
+  const { data: reports = [], isLoading, error } = useReports();
 
   const filteredReports = reports.filter(
     (report) =>
@@ -190,10 +155,63 @@ function Dashboard() {
     }
   };
 
-  if (loading) {
+  // Componente para mostrar la calificación de un reporte
+  function ReportRatingBadge({ reportId }) {
+    const { data: rating, isLoading } = useRating(reportId);
+
+    if (isLoading) {
+      return (
+        <div className="ml-2 w-24 h-5 bg-gray-200 animate-pulse rounded-full"></div>
+      );
+    }
+
+    if (!rating) return null;
+
+    return (
+      <div className="ml-2 flex-shrink-0 flex">
+        <p
+          className={`px-2 inline-flex items-center text-xs leading-5 rounded-full ${getRatingColor(
+            rating.rating
+          )}`}
+        >
+          <Star className="h-3 w-3 mr-1" />
+          {getRatingText(rating.rating)}
+        </p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ceprunsa-mustard"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border-l-4 border-red-500 p-4 my-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg
+              className="h-5 w-5 text-red-500"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-red-700">
+              Error al cargar los informes: {error.message}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -314,28 +332,21 @@ function Dashboard() {
                           className={`px-2 inline-flex text-xs leading-5 rounded-full ${
                             report.estado === "atendido"
                               ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
+                              : report.estado === "derivado"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
                           }`}
                         >
                           {report.estado === "atendido"
                             ? "Atendido"
-                            : "Derivado"}
+                            : report.estado === "derivado"
+                            ? "Derivado"
+                            : "No atendido"}
                         </p>
                       </div>
 
-                      {/* Mostrar calificación si existe */}
-                      {reportRatings[report.id] && (
-                        <div className="ml-2 flex-shrink-0 flex">
-                          <p
-                            className={`px-2 inline-flex items-center text-xs leading-5 rounded-full ${getRatingColor(
-                              reportRatings[report.id].rating
-                            )}`}
-                          >
-                            <Star className="h-3 w-3 mr-1" />
-                            {getRatingText(reportRatings[report.id].rating)}
-                          </p>
-                        </div>
-                      )}
+                      {/* Mostrar calificación usando el componente ReportRatingBadge */}
+                      <ReportRatingBadge reportId={report.id} />
                     </div>
                     <div className="ml-2 flex-shrink-0 flex">
                       <button
@@ -372,7 +383,7 @@ function Dashboard() {
                         className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-ceprunsa-gray-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard"
                       >
                         <Star className="h-4 w-4 mr-1" />
-                        {reportRatings[report.id] ? "Actualizar" : "Calificar"}
+                        Calificar
                       </Link>
                     </div>
                   </div>

@@ -8,8 +8,10 @@ import {
   useNavigate,
   useRouteError,
 } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { queryClient } from "./lib/queryClient";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ReportForm, { action as reportFormAction } from "./pages/ReportForm";
@@ -91,6 +93,7 @@ const adminLoader = async () => {
 const reportsLoader = async () => {
   try {
     const reports = await getAllReports();
+    console.log("Informes cargados:", reports);
     return reports;
   } catch (error) {
     console.error("Error al cargar informes:", error);
@@ -103,7 +106,9 @@ const reportsLoader = async () => {
 // Loader para obtener un informe específico
 const reportLoader = async ({ params }) => {
   try {
+    console.log("Cargando informe con ID:", params.id);
     const report = await getReportById(params.id);
+    console.log("Informe cargado:", report);
     return report;
   } catch (error) {
     console.error("Error al cargar informe:", error);
@@ -195,19 +200,21 @@ function App() {
   const router = useMemo(() => createRouter(), []);
 
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AuthSync />
-        <RouterProvider
-          router={router}
-          fallbackElement={
-            <div className="flex h-screen items-center justify-center">
-              Cargando aplicación...
-            </div>
-          }
-        />
-      </ToastProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ToastProvider>
+          <AuthSync />
+          <RouterProvider
+            router={router}
+            fallbackElement={
+              <div className="flex h-screen items-center justify-center">
+                Cargando aplicación...
+              </div>
+            }
+          />
+        </ToastProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

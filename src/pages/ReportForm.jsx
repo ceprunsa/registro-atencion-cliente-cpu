@@ -1,18 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  useNavigate,
-  useParams,
-  useLoaderData,
-  Form,
-  useSubmit,
-  useActionData,
-} from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
-import { createReport, updateReport } from "../services/reportService";
 import { Save, ArrowLeft } from "lucide-react";
+import {
+  useReport,
+  useCreateReport,
+  useUpdateReport,
+} from "../hooks/useReports";
 
 // Opciones para los campos de selección
 const VINCULO_OPTIONS = [
@@ -30,9 +27,21 @@ const MEDIO_OPTIONS = [
   { value: "Otro", label: "Otro" },
 ];
 
+// Modificar las opciones de estado para incluir "No atendido"
 const ESTADO_OPTIONS = [
   { value: "atendido", label: "Atendido" },
   { value: "derivado", label: "Derivado" },
+  { value: "no_atendido", label: "No atendido" },
+];
+
+// Modificar las opciones de oficina derivada para incluir "Coordinación Administrativa"
+const OFICINA_DERIVADA_OPTIONS = [
+  { value: "Informática CEPRUNSA", label: "Informática CEPRUNSA" },
+  { value: "Supervisión Académica", label: "Supervisión Académica" },
+  {
+    value: "Coordinación Administrativa",
+    label: "Coordinación Administrativa",
+  },
 ];
 
 const TIPO_CONSULTA_OPTIONS = [
@@ -41,16 +50,12 @@ const TIPO_CONSULTA_OPTIONS = [
   { value: "Administrativa", label: "Administrativa" },
   { value: "Queja/Sugerencia", label: "Queja/Sugerencia" },
 ];
-
-const OFICINA_DERIVADA_OPTIONS = [
-  { value: "Informática CEPRUNSA", label: "Informática CEPRUNSA" },
-  { value: "Supervisión Académica", label: "Supervisión Académica" },
-];
-
 // Action para manejar la creación/actualización de informes
 export async function action({ request, params }) {
   const formData = await request.formData();
   const data = Object.fromEntries(formData);
+
+  console.log("Action ejecutada con datos:", data);
 
   // Convertir tipo_consulta de string a array
   data.tipo_consulta = formData.getAll("tipo_consulta");
@@ -59,6 +64,7 @@ export async function action({ request, params }) {
     if (params.id) {
       // Actualizar informe existente
       const result = await updateReport(params.id, data);
+      console.log("Informe actualizado:", result);
       return {
         success: true,
         message: "Informe actualizado correctamente.",
@@ -68,6 +74,7 @@ export async function action({ request, params }) {
       // Crear nuevo informe
       const userEmail = formData.get("userEmail");
       const result = await createReport(data, userEmail);
+      console.log("Informe creado:", result);
       return {
         success: true,
         message: "Informe creado correctamente.",
@@ -83,17 +90,19 @@ export async function action({ request, params }) {
     };
   }
 }
-
 function ReportForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const submit = useSubmit();
-  const actionData = useActionData();
   const { addToast } = useToast();
 
-  // Obtener datos del informe si estamos editando
-  const reportData = useLoaderData();
+  // Usar React Query para obtener el reporte si estamos editando
+  const { data: reportData, isLoading: isLoadingReport } = useReport(id);
+
+  // Usar React Query para crear/actualizar reportes
+  const createReportMutation = useCreateReport();
+  const updateReportMutation = useUpdateReport();
+
   const isEditing = !!id;
 
   // Estado del formulario
@@ -116,6 +125,8 @@ function ReportForm() {
   // Cargar datos si estamos editando
   useEffect(() => {
     if (isEditing && reportData) {
+      console.log("Cargando datos para edición:", reportData);
+
       // Si el medio es Presencial pero no hay detalle, establecer el valor por defecto
       let medio_comunicacion = reportData.medio_comunicacion || "";
       if (reportData.medio === "Presencial" && !reportData.medio_comunicacion) {
@@ -136,38 +147,6 @@ function ReportForm() {
       });
     }
   }, [isEditing, reportData]);
-
-  // Redireccionar después de una acción exitosa y mostrar notificación
-  useEffect(() => {
-    if (actionData?.success) {
-      // Mostrar notificación según el tipo de acción
-      if (actionData.isNew) {
-        addToast({
-          type: TOAST_TYPES.SUCCESS,
-          message: `Informe #${actionData.reportNumber} creado correctamente.`,
-          duration: 5000,
-        });
-      } else {
-        addToast({
-          type: TOAST_TYPES.SUCCESS,
-          message: "Informe actualizado correctamente.",
-          duration: 5000,
-        });
-      }
-
-      // Redirección inmediata sin retraso
-      navigate("/");
-    } else if (actionData && !actionData.success) {
-      // Mostrar notificación de error
-      addToast({
-        type: TOAST_TYPES.ERROR,
-        message: actionData.message,
-        duration: 5000,
-      });
-    }
-
-    setIsSubmitting(false);
-  }, [actionData, navigate, addToast]);
 
   // Modificar la función handleChange para establecer automáticamente "Local del Ceprunsa" cuando el medio es "Presencial"
   const handleChange = (e) => {
@@ -253,7 +232,7 @@ function ReportForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -276,32 +255,55 @@ function ReportForm() {
       return;
     }
 
-    // Crear FormData para enviar
-    const submitData = new FormData();
+    try {
+      if (isEditing) {
+        // Actualizar informe existente
+        await updateReportMutation.mutateAsync({
+          id,
+          reportData: formData,
+        });
 
-    // Añadir todos los campos del formulario
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key !== "tipo_consulta") {
-        submitData.append(key, value);
+        addToast({
+          type: TOAST_TYPES.SUCCESS,
+          message: "Informe actualizado correctamente.",
+          duration: 5000,
+        });
+      } else {
+        // Crear nuevo informe
+        const result = await createReportMutation.mutateAsync({
+          reportData: formData,
+          userEmail: currentUser.email,
+        });
+
+        addToast({
+          type: TOAST_TYPES.SUCCESS,
+          message: `Informe #${result.nro_consulta} creado correctamente.`,
+          duration: 5000,
+        });
       }
-    });
 
-    // Añadir tipo_consulta como múltiples entradas
-    formData.tipo_consulta.forEach((tipo) => {
-      submitData.append("tipo_consulta", tipo);
-    });
+      // Redirección inmediata sin retraso
+      navigate("/");
+    } catch (error) {
+      console.error("Error al guardar el informe:", error);
 
-    // Añadir email del usuario
-    if (currentUser?.email) {
-      submitData.append("userEmail", currentUser.email);
+      addToast({
+        type: TOAST_TYPES.ERROR,
+        message: "Error al guardar el informe. Inténtelo de nuevo.",
+        duration: 5000,
+      });
+
+      setIsSubmitting(false);
     }
-
-    // Enviar formulario
-    submit(submitData, {
-      method: "post",
-      action: isEditing ? `/reports/${id}/edit` : "/reports/new",
-    });
   };
+
+  if (isLoadingReport && isEditing) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ceprunsa-mustard"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-10">
@@ -318,8 +320,7 @@ function ReportForm() {
         </h1>
       </div>
 
-      <Form
-        method="post"
+      <form
         onSubmit={handleSubmit}
         className="bg-white shadow-md rounded-lg overflow-hidden transition-all duration-300"
         noValidate
@@ -677,10 +678,16 @@ function ReportForm() {
             <button
               type="submit"
               className="inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-900 bg-ceprunsa-mustard hover:bg-ceprunsa-mustard-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard transition-colors duration-200"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                createReportMutation.isPending ||
+                updateReportMutation.isPending
+              }
             >
               <span className="flex items-center">
-                {isSubmitting ? (
+                {isSubmitting ||
+                createReportMutation.isPending ||
+                updateReportMutation.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
                     {isEditing ? "Actualizando..." : "Guardando..."}
@@ -695,7 +702,7 @@ function ReportForm() {
             </button>
           </div>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useLoaderData,
+  useParams,
   useNavigate,
   Link,
   useSearchParams,
@@ -10,44 +10,35 @@ import { ArrowLeft, Edit, FileDown, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { generateReportPDF } from "../services/pdfService";
-import { getRatingByReportId } from "../services/ratingService";
+import { useReport } from "../hooks/useReports";
+import { useRating } from "../hooks/useRatings";
 
 function ReportDetails() {
-  const report = useLoaderData();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [downloading, setDownloading] = useState(false);
-  const [rating, setRating] = useState(null);
-  const [loadingRating, setLoadingRating] = useState(true);
   const { addToast } = useToast();
+
+  // Usar React Query para obtener el reporte y la calificación
+  const {
+    data: report,
+    isLoading: isLoadingReport,
+    error: reportError,
+  } = useReport(id);
+  const { data: rating, isLoading: isLoadingRating } = useRating(id);
 
   // Verificar si se debe descargar automáticamente el PDF
   const shouldDownload = searchParams.get("download") === "true";
 
   // Efecto para descargar automáticamente el PDF si se solicita
   useEffect(() => {
-    if (shouldDownload) {
+    if (shouldDownload && report) {
       downloadPDF();
       // Eliminar el parámetro de consulta después de iniciar la descarga
-      navigate(`/reports/${report.id}`, { replace: true });
+      navigate(`/reports/${id}`, { replace: true });
     }
-  }, [shouldDownload, report.id]);
-
-  // Cargar calificación si existe
-  useEffect(() => {
-    async function loadRating() {
-      try {
-        const existingRating = await getRatingByReportId(report.id);
-        setRating(existingRating);
-        setLoadingRating(false);
-      } catch (error) {
-        console.error("Error al cargar calificación:", error);
-        setLoadingRating(false);
-      }
-    }
-
-    loadRating();
-  }, [report.id]);
+  }, [shouldDownload, report, id, navigate]);
 
   // Función para formatear la fecha de Firestore
   const formatDate = (timestamp) => {
@@ -131,6 +122,35 @@ function ReportDetails() {
     }
   };
 
+  if (isLoadingReport) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ceprunsa-mustard"></div>
+      </div>
+    );
+  }
+
+  if (reportError || !report) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-ceprunsa-gray-light">
+        <div className="bg-white p-8 rounded shadow-md">
+          <h2 className="text-2xl font-semibold text-ceprunsa-red mb-4">
+            Informe no encontrado
+          </h2>
+          <p className="text-gray-700 mb-4">
+            El informe solicitado no existe o no se pudo cargar.
+          </p>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-ceprunsa-mustard text-gray-900 py-2 px-4 rounded hover:bg-ceprunsa-mustard-light focus:outline-none focus:ring-2 focus:ring-ceprunsa-mustard focus:ring-opacity-50"
+          >
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -185,7 +205,7 @@ function ReportDetails() {
           </div>
 
           {/* Sección de calificación */}
-          {loadingRating ? (
+          {isLoadingRating ? (
             <div className="animate-pulse h-8 w-32 bg-gray-200 rounded"></div>
           ) : rating ? (
             <div className="flex items-center">
@@ -288,10 +308,16 @@ function ReportDetails() {
                   className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     report.estado === "atendido"
                       ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
+                      : report.estado === "derivado"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {report.estado === "atendido" ? "Atendido" : "Derivado"}
+                  {report.estado === "atendido"
+                    ? "Atendido"
+                    : report.estado === "derivado"
+                    ? "Derivado"
+                    : "No atendido"}
                 </span>
               </dd>
             </div>

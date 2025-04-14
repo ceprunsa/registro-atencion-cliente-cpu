@@ -1,69 +1,48 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useLoaderData } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
-import {
-  getRatingByReportId,
-  saveRating,
-  RATING_VALUES,
-} from "../services/ratingService";
+import { RATING_VALUES } from "../services/ratingService";
 import { ArrowLeft, Check, Loader } from "lucide-react";
-
-import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
+import { useReport } from "../hooks/useReports";
+import { useRating, useSaveRating } from "../hooks/useRatings";
 
 function ReportRating() {
-  const report = useLoaderData();
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const [rating, setRating] = useState(null);
+  // Usar React Query para obtener el reporte y la calificación
+  const {
+    data: report,
+    isLoading: isLoadingReport,
+    error: reportError,
+  } = useReport(id);
+  const { data: rating, isLoading: isLoadingRating } = useRating(id);
+  const saveRatingMutation = useSaveRating();
+
   const [selectedRating, setSelectedRating] = useState(null);
   const [comments, setComments] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   // Cargar calificación existente si hay
   useEffect(() => {
-    async function loadRating() {
-      try {
-        const existingRating = await getRatingByReportId(id);
-        if (existingRating) {
-          setRating(existingRating);
-          setSelectedRating(existingRating.rating);
-          setComments(existingRating.comments || "");
+    if (rating) {
+      console.log("Calificación encontrada:", rating);
+      setSelectedRating(rating.rating);
+      setComments(rating.comments || "");
 
-          // Si ya existe una calificación, mostrar mensaje
-          if (!existingRating.updated) {
-            addToast({
-              type: TOAST_TYPES.INFO,
-              message: "Ya has calificado este informe anteriormente.",
-              duration: 5000,
-            });
-          }
-        } else {
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error("Error al cargar calificación:", error);
+      // Si ya existe una calificación, mostrar mensaje
+      if (!rating.updated) {
         addToast({
-          type: TOAST_TYPES.ERROR,
-          message: "Error al cargar la calificación.",
+          type: TOAST_TYPES.INFO,
+          message: "Ya has calificado este informe anteriormente.",
           duration: 5000,
         });
-        setLoading(false);
       }
     }
-
-    if (id) {
-      loadRating();
-    } else {
-      console.error("No se encontró ID del informe");
-      setLoading(false);
-    }
-  }, [id, addToast]);
+  }, [rating, addToast]);
 
   // Manejar envío del formulario
   const handleSubmit = async (e) => {
@@ -78,8 +57,6 @@ function ReportRating() {
       return;
     }
 
-    setSubmitting(true);
-
     try {
       const ratingData = {
         rating: selectedRating,
@@ -89,7 +66,10 @@ function ReportRating() {
         updated: true,
       };
 
-      await saveRating(id, ratingData);
+      console.log("Guardando calificación:", ratingData);
+
+      // Usar la mutación de React Query para guardar la calificación
+      await saveRatingMutation.mutateAsync({ reportId: id, ratingData });
 
       addToast({
         type: TOAST_TYPES.SUCCESS,
@@ -111,15 +91,32 @@ function ReportRating() {
           "Error al guardar la calificación. Por favor, inténtelo de nuevo.",
         duration: 5000,
       });
-      setSubmitting(false);
     }
   };
 
   // Renderizar estado de carga
-  if (loading) {
+  if (isLoadingReport || isLoadingRating) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ceprunsa-mustard"></div>
+      </div>
+    );
+  }
+
+  // Renderizar estado de error
+  if (reportError || !report) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+        <p className="text-gray-600 mb-6">
+          No se pudo cargar la información del informe.
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 bg-ceprunsa-mustard text-gray-900 rounded-md hover:bg-ceprunsa-mustard-light"
+        >
+          Volver
+        </button>
       </div>
     );
   }
@@ -138,24 +135,6 @@ function ReportRating() {
           Su calificación ha sido registrada correctamente.
         </p>
         <p className="text-sm text-gray-500">Redirigiendo...</p>
-      </div>
-    );
-  }
-
-  // Verificar si tenemos los datos del informe
-  if (!report) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
-        <p className="text-gray-600 mb-6">
-          No se pudo cargar la información del informe.
-        </p>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-4 py-2 bg-ceprunsa-mustard text-gray-900 rounded-md hover:bg-ceprunsa-mustard-light"
-        >
-          Volver
-        </button>
       </div>
     );
   }
@@ -179,7 +158,7 @@ function ReportRating() {
           <div className="grid grid-cols-2 items-center">
             <div className="p-4 border-r border-gray-200">
               <img
-                src={ceprunsalogo}
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png"
                 alt="CEPRUNSA Logo"
                 className="h-16 object-contain"
               />
@@ -371,23 +350,18 @@ function ReportRating() {
           <div className="flex justify-center">
             <button
               type="submit"
-              disabled={submitting}
-              className="px-6 py-3 bg-ceprunsa-mustard text-gray-900 rounded-md font-medium hover:bg-ceprunsa-mustard-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard disabled:opacity-50 transition-colors"
+              disabled={saveRatingMutation.isPending}
+              className="px-6 py-3 bg-ceprunsa-mustard text-gray-900 rounded-md hover:bg-ceprunsa-mustard-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? (
+              {saveRatingMutation.isLoading ? (
                 <>
-                  <Loader className="inline-block h-4 w-4 animate-spin mr-2" />
+                  <Loader className="mr-2 h-5 w-5 animate-spin" />
                   Enviando...
                 </>
               ) : (
-                "Enviar calificación"
+                "Enviar Calificación"
               )}
             </button>
-          </div>
-
-          {/* Mensaje de agradecimiento */}
-          <div className="mt-8 text-center">
-            <p className="text-lg font-bold">¡Gracias por su respuesta!</p>
           </div>
         </form>
       </div>

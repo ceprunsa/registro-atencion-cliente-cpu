@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,51 +15,26 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import {
-  getAllowedUsers,
-  addAllowedUser,
-  removeAllowedUser,
-  updateUserAdminStatus,
-} from "../services/userService";
+  useAllowedUsers,
+  useAddAllowedUser,
+  useRemoveAllowedUser,
+  useUpdateUserAdminStatus,
+} from "../hooks/useUsers";
 
 function UserManagement() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(null);
-  const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(null);
   const [error, setError] = useState("");
 
   const { currentUser, isAdmin: currentUserIsAdmin } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // Cargar usuarios permitidos
-  useEffect(() => {
-    async function loadUsers() {
-      try {
-        if (!currentUserIsAdmin) {
-          navigate("/");
-          return;
-        }
-
-        const allowedUsers = await getAllowedUsers();
-        setUsers(allowedUsers);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error al cargar usuarios:", error);
-        addToast({
-          type: TOAST_TYPES.ERROR,
-          message: "Error al cargar la lista de usuarios permitidos.",
-          duration: 5000,
-        });
-        setLoading(false);
-      }
-    }
-
-    loadUsers();
-  }, [currentUserIsAdmin, navigate, addToast]);
+  // Usar React Query para obtener y manipular usuarios
+  const { data: users = [], isLoading } = useAllowedUsers();
+  const addUserMutation = useAddAllowedUser();
+  const removeUserMutation = useRemoveAllowedUser();
+  const updateAdminStatusMutation = useUpdateUserAdminStatus();
 
   // Validar formato de correo electrónico
   const isValidEmail = (email) => {
@@ -81,21 +56,20 @@ function UserManagement() {
     }
 
     setError("");
-    setIsAdding(true);
 
     try {
-      const addedUser = await addAllowedUser(
-        newEmail,
-        currentUser.email,
-        isAdmin
-      );
-      setUsers([...users, addedUser]);
+      await addUserMutation.mutateAsync({
+        email: newEmail,
+        addedBy: currentUser.email,
+        isAdmin: isAdmin,
+      });
+
       setNewEmail("");
       setIsAdmin(false);
 
       addToast({
         type: TOAST_TYPES.SUCCESS,
-        message: `Usuario ${addedUser.email} agregado correctamente.`,
+        message: `Usuario ${newEmail} agregado correctamente.`,
         duration: 3000,
       });
     } catch (error) {
@@ -107,8 +81,6 @@ function UserManagement() {
         message: error.message || "Error al agregar usuario.",
         duration: 5000,
       });
-    } finally {
-      setIsAdding(false);
     }
   };
 
@@ -117,11 +89,8 @@ function UserManagement() {
     if (
       window.confirm(`¿Está seguro de eliminar el acceso para ${userEmail}?`)
     ) {
-      setIsRemoving(userId);
-
       try {
-        await removeAllowedUser(userId);
-        setUsers(users.filter((user) => user.id !== userId));
+        await removeUserMutation.mutateAsync(userId);
 
         addToast({
           type: TOAST_TYPES.SUCCESS,
@@ -136,8 +105,6 @@ function UserManagement() {
           message: "Error al eliminar usuario.",
           duration: 5000,
         });
-      } finally {
-        setIsRemoving(null);
       }
     }
   };
@@ -152,17 +119,11 @@ function UserManagement() {
         `¿Está seguro de ${action} permisos de administrador a ${userEmail}?`
       )
     ) {
-      setIsUpdatingAdmin(userId);
-
       try {
-        await updateUserAdminStatus(userId, newStatus);
-
-        // Actualizar la lista de usuarios
-        setUsers(
-          users.map((user) =>
-            user.id === userId ? { ...user, isAdmin: newStatus } : user
-          )
-        );
+        await updateAdminStatusMutation.mutateAsync({
+          userId,
+          isAdmin: newStatus,
+        });
 
         addToast({
           type: TOAST_TYPES.SUCCESS,
@@ -179,15 +140,14 @@ function UserManagement() {
           message: "Error al actualizar permisos de administrador.",
           duration: 5000,
         });
-      } finally {
-        setIsUpdatingAdmin(null);
       }
     }
   };
 
   // Redireccionar si no es administrador
-  if (!currentUserIsAdmin && !loading) {
-    return null; // El useEffect ya maneja la redirección
+  if (!currentUserIsAdmin && !isLoading) {
+    navigate("/");
+    return null;
   }
 
   return (
@@ -235,16 +195,16 @@ function UserManagement() {
                       ? "border-red-300 focus:ring-red-500 focus:border-red-500"
                       : "border-gray-300 focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard"
                   }`}
-                  disabled={isAdding}
+                  disabled={addUserMutation.isPending}
                 />
                 {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
               </div>
               <button
                 type="submit"
-                disabled={isAdding}
+                disabled={addUserMutation.isPending}
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-900 bg-ceprunsa-mustard hover:bg-ceprunsa-mustard-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ceprunsa-mustard disabled:opacity-50"
               >
-                {isAdding ? (
+                {addUserMutation.isPending ? (
                   <>
                     <Loader className="animate-spin h-4 w-4 mr-2" />
                     Agregando...
@@ -279,7 +239,7 @@ function UserManagement() {
 
         {/* Lista de usuarios permitidos */}
         <div className="px-4 py-5 sm:px-6">
-          {loading ? (
+          {isLoading ? (
             <div className="flex justify-center py-8">
               <Loader className="animate-spin h-8 w-8 text-ceprunsa-mustard" />
             </div>
@@ -379,14 +339,20 @@ function UserManagement() {
                                 user.isAdmin
                               )
                             }
-                            disabled={isUpdatingAdmin === user.id}
+                            disabled={
+                              updateAdminStatusMutation.isPending &&
+                              updateAdminStatusMutation.variables?.userId ===
+                                user.id
+                            }
                             className={`focus:outline-none focus:underline disabled:opacity-50 ${
                               user.isAdmin
                                 ? "text-orange-600 hover:text-orange-900"
                                 : "text-purple-600 hover:text-purple-900"
                             }`}
                           >
-                            {isUpdatingAdmin === user.id ? (
+                            {updateAdminStatusMutation.isPending &&
+                            updateAdminStatusMutation.variables?.userId ===
+                              user.id ? (
                               <Loader className="animate-spin h-4 w-4 inline" />
                             ) : user.isAdmin ? (
                               <>
@@ -405,10 +371,14 @@ function UserManagement() {
                             onClick={() =>
                               handleRemoveUser(user.id, user.email)
                             }
-                            disabled={isRemoving === user.id}
+                            disabled={
+                              removeUserMutation.isPending &&
+                              removeUserMutation.variables === user.id
+                            }
                             className="text-red-600 hover:text-red-900 focus:outline-none focus:underline disabled:opacity-50"
                           >
-                            {isRemoving === user.id ? (
+                            {removeUserMutation.isPending &&
+                            removeUserMutation.variables === user.id ? (
                               <Loader className="animate-spin h-4 w-4 inline" />
                             ) : (
                               <>
