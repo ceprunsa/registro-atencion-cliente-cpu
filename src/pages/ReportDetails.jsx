@@ -6,12 +6,12 @@ import {
   Link,
   useSearchParams,
 } from "react-router-dom";
-import { ArrowLeft, Edit, FileDown, Star } from "lucide-react";
+import { ArrowLeft, Edit, FileDown, Star, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { generateReportPDF } from "../services/pdfService";
 import { useReport } from "../hooks/useReports";
-import { useRating } from "../hooks/useRatings";
+import { useRating, useCanModifyRating } from "../hooks/useRatings";
 
 function ReportDetails() {
   const { id } = useParams();
@@ -27,6 +27,8 @@ function ReportDetails() {
     error: reportError,
   } = useReport(id);
   const { data: rating, isLoading: isLoadingRating } = useRating(id);
+  const { data: canModifyRating, isLoading: isLoadingCanModify } =
+    useCanModifyRating(id);
 
   // Verificar si se debe descargar automáticamente el PDF
   const shouldDownload = searchParams.get("download") === "true";
@@ -205,7 +207,7 @@ function ReportDetails() {
           </div>
 
           {/* Sección de calificación */}
-          {isLoadingRating ? (
+          {isLoadingRating || isLoadingCanModify ? (
             <div className="animate-pulse h-8 w-32 bg-gray-200 rounded"></div>
           ) : rating ? (
             <div className="flex items-center">
@@ -217,12 +219,19 @@ function ReportDetails() {
                 <Star className="h-4 w-4 mr-1" />
                 {getRatingText(rating.rating)}
               </span>
-              <Link
-                to={`/reports/${report.id}/rate`}
-                className="ml-2 text-sm text-ceprunsa-red hover:underline"
-              >
-                Actualizar
-              </Link>
+              {canModifyRating ? (
+                <Link
+                  to={`/reports/${report.id}/rate`}
+                  className="ml-2 text-sm text-ceprunsa-red hover:underline"
+                >
+                  Actualizar
+                </Link>
+              ) : (
+                <span className="ml-2 text-sm text-gray-500 flex items-center">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Bloqueada
+                </span>
+              )}
             </div>
           ) : (
             <Link

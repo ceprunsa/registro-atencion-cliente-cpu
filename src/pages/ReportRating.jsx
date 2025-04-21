@@ -4,9 +4,13 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { RATING_VALUES } from "../services/ratingService";
-import { ArrowLeft, Check, Loader } from "lucide-react";
+import { ArrowLeft, Check, Loader, AlertCircle, Lock } from "lucide-react";
 import { useReport } from "../hooks/useReports";
-import { useRating, useSaveRating } from "../hooks/useRatings";
+import {
+  useRating,
+  useSaveRating,
+  useCanModifyRating,
+} from "../hooks/useRatings";
 
 function ReportRating() {
   const { id } = useParams();
@@ -20,6 +24,8 @@ function ReportRating() {
     error: reportError,
   } = useReport(id);
   const { data: rating, isLoading: isLoadingRating } = useRating(id);
+  const { data: canModify, isLoading: isLoadingCanModify } =
+    useCanModifyRating(id);
   const saveRatingMutation = useSaveRating();
 
   const [selectedRating, setSelectedRating] = useState(null);
@@ -33,11 +39,11 @@ function ReportRating() {
       setSelectedRating(rating.rating);
       setComments(rating.comments || "");
 
-      // Si ya existe una calificación, mostrar mensaje
-      if (!rating.updated) {
+      // Si ya existe una calificación y está bloqueada, mostrar mensaje
+      if (rating.locked) {
         addToast({
           type: TOAST_TYPES.INFO,
-          message: "Ya has calificado este informe anteriormente.",
+          message: "Esta calificación ya no puede ser modificada.",
           duration: 5000,
         });
       }
@@ -88,6 +94,7 @@ function ReportRating() {
       addToast({
         type: TOAST_TYPES.ERROR,
         message:
+          error.message ||
           "Error al guardar la calificación. Por favor, inténtelo de nuevo.",
         duration: 5000,
       });
@@ -95,7 +102,7 @@ function ReportRating() {
   };
 
   // Renderizar estado de carga
-  if (isLoadingReport || isLoadingRating) {
+  if (isLoadingReport || isLoadingRating || isLoadingCanModify) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ceprunsa-mustard"></div>
@@ -135,6 +142,47 @@ function ReportRating() {
           Su calificación ha sido registrada correctamente.
         </p>
         <p className="text-sm text-gray-500">Redirigiendo...</p>
+      </div>
+    );
+  }
+
+  // Renderizar mensaje de calificación bloqueada
+  if (canModify === false) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-6 flex items-center">
+          <button
+            onClick={() => navigate(`/reports/${id}`)}
+            className="mr-4 p-2 rounded-full hover:bg-ceprunsa-gray-light"
+            aria-label="Volver"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Calificación Bloqueada
+          </h1>
+        </div>
+
+        <div className="bg-white shadow-md rounded-lg overflow-hidden p-8">
+          <div className="flex flex-col items-center justify-center text-center">
+            <div className="bg-yellow-100 rounded-full p-4 mb-6">
+              <Lock className="h-12 w-12 text-yellow-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Esta calificación ya no puede ser modificada
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Las calificaciones solo pueden realizarse una vez para garantizar
+              la integridad de las evaluaciones.
+            </p>
+            <button
+              onClick={() => navigate(`/reports/${id}`)}
+              className="px-6 py-3 bg-ceprunsa-mustard text-gray-900 rounded-md hover:bg-ceprunsa-mustard-light"
+            >
+              Volver al informe
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -346,6 +394,21 @@ function ReportRating() {
             />
           </div>
 
+          {/* Aviso importante */}
+          <div className="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  <strong>Importante:</strong> Las calificaciones solo pueden
+                  realizarse una vez y no podrán ser modificadas posteriormente.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Botón de envío */}
           <div className="flex justify-center">
             <button
@@ -353,7 +416,7 @@ function ReportRating() {
               disabled={saveRatingMutation.isPending}
               className="px-6 py-3 bg-ceprunsa-mustard text-gray-900 rounded-md hover:bg-ceprunsa-mustard-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saveRatingMutation.isLoading ? (
+              {saveRatingMutation.isPending ? (
                 <>
                   <Loader className="mr-2 h-5 w-5 animate-spin" />
                   Enviando...
