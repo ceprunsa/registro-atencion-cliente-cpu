@@ -69,7 +69,7 @@ export async function saveRating(reportId, ratingData) {
       console.log("Creando nueva calificación");
       ratingToSave.created_at = serverTimestamp();
       // Las nuevas calificaciones no están bloqueadas inicialmente
-      ratingToSave.locked = false;
+      ratingToSave.locked = true;
       await setDoc(ratingRef, ratingToSave);
     }
 
