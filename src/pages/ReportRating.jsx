@@ -4,7 +4,14 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { RATING_VALUES } from "../services/ratingService";
-import { ArrowLeft, Check, Loader, AlertCircle, Lock } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Loader,
+  AlertCircle,
+  Lock,
+  Home,
+} from "lucide-react";
 import { useReport } from "../hooks/useReports";
 import {
   useRating,
@@ -31,24 +38,37 @@ function ReportRating() {
   const [selectedRating, setSelectedRating] = useState(null);
   const [comments, setComments] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [notificationShown, setNotificationShown] = useState(false);
 
   // Cargar calificación existente si hay
   useEffect(() => {
-    if (rating) {
+    if (rating && !notificationShown) {
       console.log("Calificación encontrada:", rating);
       setSelectedRating(rating.rating);
       setComments(rating.comments || "");
 
       // Si ya existe una calificación y está bloqueada, mostrar mensaje
+      // Solo mostrar la notificación una vez
       if (rating.locked) {
         addToast({
           type: TOAST_TYPES.INFO,
           message: "Esta calificación ya no puede ser modificada.",
           duration: 5000,
         });
+        setNotificationShown(true);
       }
     }
-  }, [rating, addToast]);
+  }, [rating, addToast, notificationShown]);
+
+  // Función para omitir la calificación y volver al dashboard
+  const handleSkipRating = () => {
+    addToast({
+      type: TOAST_TYPES.INFO,
+      message: "Ha omitido la calificación del informe.",
+      duration: 3000,
+    });
+    navigate("/");
+  };
 
   // Manejar envío del formulario
   const handleSubmit = async (e) => {
@@ -85,9 +105,9 @@ function ReportRating() {
 
       setSubmitted(true);
 
-      // Redirigir después de 2 segundos
+      // Redirigir después de 2 segundos al dashboard
       setTimeout(() => {
-        navigate(`/reports/${id}`);
+        navigate("/");
       }, 2000);
     } catch (error) {
       console.error("Error al guardar calificación:", error);
@@ -141,7 +161,7 @@ function ReportRating() {
         <p className="text-gray-600 mb-6">
           Su calificación ha sido registrada correctamente.
         </p>
-        <p className="text-sm text-gray-500">Redirigiendo...</p>
+        <p className="text-sm text-gray-500">Redirigiendo al dashboard...</p>
       </div>
     );
   }
@@ -409,8 +429,17 @@ function ReportRating() {
             </div>
           </div>
 
-          {/* Botón de envío */}
-          <div className="flex justify-center">
+          {/* Botones de acción */}
+          <div className="flex justify-center gap-4">
+            <button
+              type="button"
+              onClick={handleSkipRating}
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              <Home className="mr-2 h-5 w-5 inline" />
+              Omitir calificación
+            </button>
+
             <button
               type="submit"
               disabled={saveRatingMutation.isPending}

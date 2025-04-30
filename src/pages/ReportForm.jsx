@@ -111,7 +111,7 @@ function ReportForm() {
     vinculo_cliente_postulante: "Postulante",
     vinculo_otro: "",
     medio: "Presencial",
-    medio_comunicacion: "",
+    medio_comunicacion: "Local Ceprunsa",
     estado: "atendido",
     tipo_consulta: [],
     oficina_derivada: "",
@@ -228,6 +228,11 @@ function ReportForm() {
         "Debe especificar el detalle del medio de comunicación";
     }
 
+    if (!formData.resultado_final.trim()) {
+      newErrors.resultado_final =
+        "Debe especificar el resultado final de la atención";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -268,6 +273,9 @@ function ReportForm() {
           message: "Informe actualizado correctamente.",
           duration: 5000,
         });
+
+        // Redirección inmediata sin retraso
+        navigate("/");
       } else {
         // Crear nuevo informe
         const result = await createReportMutation.mutateAsync({
@@ -280,10 +288,10 @@ function ReportForm() {
           message: `Informe #${result.nro_consulta} creado correctamente.`,
           duration: 5000,
         });
-      }
 
-      // Redirección inmediata sin retraso
-      navigate("/");
+        // Redirigir a la página de calificación del reporte
+        navigate(`/reports/${result.id}/rate`);
+      }
     } catch (error) {
       console.error("Error al guardar el informe:", error);
 
@@ -648,7 +656,7 @@ function ReportForm() {
                 htmlFor="resultado_final"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Resultado Final
+                Resultado Final <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <textarea
@@ -657,9 +665,27 @@ function ReportForm() {
                   rows={4}
                   value={formData.resultado_final}
                   onChange={handleChange}
-                  className="shadow-sm block w-full px-4 py-2.5 sm:text-sm border-gray-300 rounded-md focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none transition-colors duration-200"
+                  className={`shadow-sm block w-full px-4 py-2.5 sm:text-sm rounded-md transition-colors duration-200
+        ${
+          errors.resultado_final
+            ? "border-red-300 focus:ring-red-500 focus:border-red-500 focus:outline-none"
+            : "border-gray-300 focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none"
+        }`}
                   placeholder="Describa el resultado final de la atención..."
+                  aria-invalid={errors.resultado_final ? "true" : "false"}
+                  aria-describedby={
+                    errors.resultado_final ? "resultado-final-error" : undefined
+                  }
+                  required
                 />
+                {errors.resultado_final && (
+                  <p
+                    className="mt-1 text-sm text-red-600"
+                    id="resultado-final-error"
+                  >
+                    {errors.resultado_final}
+                  </p>
+                )}
               </div>
             </div>
           </div>
