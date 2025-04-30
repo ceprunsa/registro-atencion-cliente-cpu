@@ -48,8 +48,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
 
       // Insertar el logo en la celda A1 con un tamaño específico
       worksheet.addImage(logoId, {
-        tl: { col: 0, row: 0 },
-        ext: { width: 100, height: 50 },
+        tl: { col: 0.2, row: 0.2 },
+        ext: { width: 275, height: 75 },
       });
     }
 

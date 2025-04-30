@@ -93,7 +93,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
             <div className="flex flex-col items-center h-16 px-4  text-white">
               <img
                 className="h-14 w-auto mt-2"
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png"
+                src={ceprunsalogo}
                 alt="CEPRUNSA Logo"
               />
             </div>
