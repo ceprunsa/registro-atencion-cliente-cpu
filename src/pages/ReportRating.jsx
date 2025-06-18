@@ -19,6 +19,8 @@ import {
   useCanModifyRating,
 } from "../hooks/useRatings";
 
+import ceprunsaLogo from "../assets/ceprunsa-logo.png";
+
 function ReportRating() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -226,7 +228,7 @@ function ReportRating() {
           <div className="grid grid-cols-2 items-center">
             <div className="p-4 border-r border-gray-200">
               <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png"
+                src={ceprunsaLogo}
                 alt="CEPRUNSA Logo"
                 className="h-16 object-contain"
               />
