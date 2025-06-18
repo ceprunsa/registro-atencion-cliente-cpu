@@ -19,7 +19,7 @@ import {
   useCanModifyRating,
 } from "../hooks/useRatings";
 
-import ceprunsaLogo from "../assets/ceprunsa-logo.png";
+import ceprunsalogo from "../assets/images/ceprunsa-logo.png";
 
 function ReportRating() {
   const { id } = useParams();
@@ -228,7 +228,7 @@ function ReportRating() {
           <div className="grid grid-cols-2 items-center">
             <div className="p-4 border-r border-gray-200">
               <img
-                src={ceprunsaLogo}
+                src={ceprunsalogo}
                 alt="CEPRUNSA Logo"
                 className="h-16 object-contain"
               />
