@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getRatingByReportId } from "./ratingService";
+import logoCeprunsa from "../assets/images/ceprunsa-logo.png";
 
 // Función para formatear la fecha de Firestore
 export const formatDate = (timestamp) => {
@@ -59,8 +60,7 @@ export const generateReportPDF = async (report) => {
       });
 
       // URL del logo de CEPRUNSA
-      const logoUrl =
-        "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/349615752_199607626324527_8076311446864506776_n-removebg-preview%20%281%29-odSjwPBe6la6Rv7o6XaFwLfG2zQoCO.png";
+      const logoUrl = logoCeprunsa;
 
       // Colores corporativos
       const colorRojo = [183, 28, 28];
@@ -75,7 +75,7 @@ export const generateReportPDF = async (report) => {
 
         // Agregar el logo encima del fondo
         if (img) {
-          doc.addImage(img, "PNG", 10, 10, 30, 15);
+          doc.addImage(img, "PNG", 10, 12, 38, 12);
         }
 
         // Línea decorativa superior
@@ -130,6 +130,8 @@ export const generateReportPDF = async (report) => {
               ? `${report.vinculo_cliente_postulante} (${report.vinculo_otro})`
               : report.vinculo_cliente_postulante || "",
           ],
+          ["Teléfono", report.telefono_cliente || "No especificado"],
+          ["Correo Electrónico", report.correo_cliente || "No especificado"],
         ];
 
         autoTable(doc, {

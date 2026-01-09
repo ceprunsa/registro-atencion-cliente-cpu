@@ -84,7 +84,7 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
     };
 
     // Agregar fecha de generación
-    worksheet.mergeCells("C4:H4");
+    worksheet.mergeCells("C4:J4");
     const dateCell = worksheet.getCell("C4");
     dateCell.value = `Generado el: ${new Date().toLocaleDateString("es-PE", {
       day: "2-digit",
@@ -112,6 +112,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
       "Nro. Consulta",
       "Cliente",
       "Vínculo",
+      "Teléfono",
+      "Correo Electrónico",
       "Medio",
       "Detalle del Medio",
       "Estado",
@@ -130,6 +132,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
       { key: "nroConsulta", width: 15 },
       { key: "cliente", width: 25 },
       { key: "vinculo", width: 20 },
+      { key: "telefono", width: 20 },
+      { key: "correo", width: 30 },
       { key: "medio", width: 15 },
       { key: "detalleMedio", width: 25 },
       { key: "estado", width: 12 },
@@ -209,6 +213,8 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
         nroConsulta: report.nro_consulta || "",
         cliente: report.cliente || "",
         vinculo: report.vinculo_cliente_postulante || "",
+        telefono: report.telefono_cliente || "No especificado",
+        correo: report.correo_cliente || "No especificado",
         medio: report.medio || "",
         detalleMedio: report.medio_comunicacion || "",
         estado: report.estado === "atendido" ? "Atendido" : "Derivado",

@@ -272,6 +272,21 @@ function ReportDetails() {
               </dd>
             </div>
 
+            <div className="sm:col-span-1">
+              <dt className="text-sm font-medium text-gray-500">
+                Correo Electrónico
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {report.correo_cliente || "No especificado"}
+              </dd>
+            </div>
+            <div className="sm:col-span-1">
+              <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {report.telefono_cliente || "No especificado"}
+              </dd>
+            </div>
+
             {/* Datos de la atención - Sección */}
             <div className="sm:col-span-2">
               <dt className="text-base font-medium text-ceprunsa-red">

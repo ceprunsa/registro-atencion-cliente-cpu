@@ -50,7 +50,7 @@ async function generateConsultationNumber() {
 }
 
 // Crear un nuevo informe
-export async function createReport(reportData, userEmail) {
+export async function createReport(reportData) {
   try {
     const nroConsulta = await generateConsultationNumber();
 
@@ -58,7 +58,6 @@ export async function createReport(reportData, userEmail) {
       ...reportData,
       nro_consulta: nroConsulta,
       fecha_hora: serverTimestamp(),
-      responsable: userEmail,
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
     };

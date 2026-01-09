@@ -93,7 +93,6 @@ const adminLoader = async () => {
 const reportsLoader = async () => {
   try {
     const reports = await getAllReports();
-    console.log("Informes cargados:", reports);
     return reports;
   } catch (error) {
     console.error("Error al cargar informes:", error);

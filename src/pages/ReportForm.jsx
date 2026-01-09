@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
 import { useToast, TOAST_TYPES } from "../contexts/ToastContext";
 import { Save, ArrowLeft } from "lucide-react";
 import {
@@ -18,8 +17,9 @@ const VINCULO_OPTIONS = [
   { value: "Otro", label: "Otro" },
 ];
 
-const MEDIO_OPTIONS = [
-  { value: "Presencial", label: "Presencial" },
+let MEDIO_OPTIONS = [
+  { value: "Presencial - San Agustin", label: "Presencial - San Agustin" },
+  { value: "Presencial - Calle Moral", label: "Presencial - Calle Moral" },
   { value: "Telefónico", label: "Telefónico" },
   { value: "Telefónico Fijo", label: "Telefónico Fijo" },
   { value: "Correo", label: "Correo" },
@@ -50,6 +50,20 @@ const TIPO_CONSULTA_OPTIONS = [
   { value: "Administrativa", label: "Administrativa" },
   { value: "Queja/Sugerencia", label: "Queja/Sugerencia" },
 ];
+
+const RESPONSABLES_OPTIONS = [
+  {
+    value: "Mayra Shandell, Torres Rosado",
+    label: "Mayra Shandell, Torres Rosado",
+  },
+  {
+    value: "Eddy Roberto, Mamani Chacondori",
+    label: "Eddy Roberto, Mamani Chacondori",
+  },
+];
+
+import { createReport, updateReport } from "../services/reportService";
+
 // Action para manejar la creación/actualización de informes
 export async function action({ request, params }) {
   const formData = await request.formData();
@@ -93,7 +107,6 @@ export async function action({ request, params }) {
 function ReportForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
   const { addToast } = useToast();
 
   // Usar React Query para obtener el reporte si estamos editando
@@ -111,11 +124,14 @@ function ReportForm() {
     vinculo_cliente_postulante: "Postulante",
     vinculo_otro: "",
     medio: "Presencial",
-    medio_comunicacion: "Local Ceprunsa",
+    medio_comunicacion: "",
     estado: "atendido",
     tipo_consulta: [],
     oficina_derivada: "",
     resultado_final: "",
+    responsable: "",
+    telefono_cliente: "",
+    correo_cliente: "",
   });
 
   // Estado para validación
@@ -126,12 +142,14 @@ function ReportForm() {
   useEffect(() => {
     if (isEditing && reportData) {
       console.log("Cargando datos para edición:", reportData);
+      // aumentar en MEDIO_OPTIONS Presecial solo si se esta editando
+      MEDIO_OPTIONS = [
+        { value: "Presencial", label: "Presencial" },
+        ...MEDIO_OPTIONS,
+      ];
 
       // Si el medio es Presencial pero no hay detalle, establecer el valor por defecto
       let medio_comunicacion = reportData.medio_comunicacion || "";
-      if (reportData.medio === "Presencial" && !reportData.medio_comunicacion) {
-        medio_comunicacion = "Local del Ceprunsa";
-      }
 
       setFormData({
         cliente: reportData.cliente || "",
@@ -144,32 +162,19 @@ function ReportForm() {
         tipo_consulta: reportData.tipo_consulta || [],
         oficina_derivada: reportData.oficina_derivada || "",
         resultado_final: reportData.resultado_final || "",
+        responsable: reportData.responsable || "",
+        telefono_cliente: reportData.telefono_cliente || "",
+        correo_cliente: reportData.correo_cliente || "",
       });
     }
   }, [isEditing, reportData]);
 
-  // Modificar la función handleChange para establecer automáticamente "Local del Ceprunsa" cuando el medio es "Presencial"
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     // Si se está cambiando el medio, manejar el detalle del medio según corresponda
     if (name === "medio") {
-      if (value === "Presencial") {
-        // Si es Presencial, establecer automáticamente "Local del Ceprunsa"
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-          medio_comunicacion: "Local del Ceprunsa",
-        }));
-      } else {
-        // Para otros medios, limpiar el campo para que el usuario lo complete
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-          medio_comunicacion: "",
-        }));
-      }
-
+      //no borrar el detalle al cambiar el medio
+      setFormData((prev) => ({ ...prev, medio: value }));
       // Limpiar error si existía
       if (errors.medio_comunicacion) {
         setErrors((prev) => ({ ...prev, medio_comunicacion: null }));
@@ -208,6 +213,23 @@ function ReportForm() {
       newErrors.cliente = "El nombre del cliente es obligatorio";
     }
 
+    if (!formData.correo_cliente.trim()) {
+      newErrors.correo_cliente =
+        "El correo electrónico del cliente es obligatorio";
+      // Validar formato de correo electrónico
+    } else if (
+      !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(formData.correo_cliente)
+    ) {
+      newErrors.correo_cliente = "El correo electrónico no es válido";
+    }
+
+    if (!formData.telefono_cliente.trim()) {
+      newErrors.telefono_cliente = "El teléfono del cliente es obligatorio";
+      // Validar formato de teléfono (9 dígitos)
+    } else if (!/^[0-9]{9}$/.test(formData.telefono_cliente)) {
+      newErrors.telefono_cliente = "El teléfono debe tener 9 dígitos";
+    }
+
     if (formData.tipo_consulta.length === 0) {
       newErrors.tipo_consulta = "Debe seleccionar al menos un tipo de consulta";
     }
@@ -223,14 +245,12 @@ function ReportForm() {
       newErrors.vinculo_otro = "Debe especificar el vínculo";
     }
 
-    if (!formData.medio_comunicacion.trim()) {
-      newErrors.medio_comunicacion =
-        "Debe especificar el detalle del medio de comunicación";
-    }
-
     if (!formData.resultado_final.trim()) {
       newErrors.resultado_final =
         "Debe especificar el resultado final de la atención";
+    }
+    if (!formData.responsable) {
+      newErrors.responsable = "Debe seleccionar un responsable";
     }
 
     setErrors(newErrors);
@@ -278,9 +298,9 @@ function ReportForm() {
         navigate("/");
       } else {
         // Crear nuevo informe
+
         const result = await createReportMutation.mutateAsync({
           reportData: formData,
-          userEmail: currentUser.email,
         });
 
         addToast({
@@ -297,7 +317,8 @@ function ReportForm() {
 
       addToast({
         type: TOAST_TYPES.ERROR,
-        message: "Error al guardar el informe. Inténtelo de nuevo.",
+        message:
+          "Error al guardar el informe. Revise los datos e inténtelo de nuevo.",
         duration: 5000,
       });
 
@@ -442,6 +463,65 @@ function ReportForm() {
               </div>
             )}
 
+            {/* aumentar correo y telefono del cliente*/}
+            <div className="sm:col-span-4">
+              <label
+                htmlFor="correo_cliente"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Correo Electrónico del Cliente
+                <span className="text-red-500"> *</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                  name="correo_cliente"
+                  id="correo_cliente"
+                  value={formData.correo_cliente || ""}
+                  onChange={handleChange}
+                  className="shadow-sm block w-full px-4 py-2.5 sm:text-sm border-gray-300 rounded-md focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none transition-colors duration-200"
+                  required
+                />
+                {errors.correo_cliente && (
+                  <p
+                    className="mt-1 text-sm text-red-600"
+                    id="correo-cliente-error"
+                  >
+                    {errors.correo_cliente}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="sm:col-span-4">
+              <label
+                htmlFor="telefono_cliente"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Teléfono del Cliente <span className="text-red-500"> *</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  name="telefono_cliente"
+                  id="telefono_cliente"
+                  value={formData.telefono_cliente || ""}
+                  pattern="[0-9]{9}"
+                  onChange={handleChange}
+                  className="shadow-sm block w-full px-4 py-2.5 sm:text-sm border-gray-300 rounded-md focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none transition-colors duration-200"
+                  required
+                />
+                {errors.telefono_cliente && (
+                  <p
+                    className="mt-1 text-sm text-red-600"
+                    id="telefono-cliente-error"
+                  >
+                    {errors.telefono_cliente}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Datos de la atención */}
             <div className="sm:col-span-6 pt-4">
               <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-6 flex items-center">
@@ -534,7 +614,6 @@ function ReportForm() {
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
                 Detalle del medio de comunicación{" "}
-                <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -566,7 +645,6 @@ function ReportForm() {
                       ? "medio-comunicacion-error"
                       : undefined
                   }
-                  required
                 />
                 {errors.medio_comunicacion && (
                   <p
@@ -684,6 +762,48 @@ function ReportForm() {
                     id="resultado-final-error"
                   >
                     {errors.resultado_final}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="sm:col-span-6">
+              <label
+                htmlFor="responsable"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Responsable <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  id="responsable"
+                  name="responsable"
+                  value={formData.responsable}
+                  onChange={handleChange}
+                  className={`shadow-sm block w-full px-4 py-2.5 sm:text-sm rounded-md transition-colors duration-200
+                    ${
+                      errors.responsable
+                        ? "border-red-300 focus:ring-red-500 focus:border-red-500 focus:outline-none"
+                        : "border-gray-300 focus:ring-ceprunsa-mustard focus:border-ceprunsa-mustard focus:outline-none"
+                    }`}
+                  aria-invalid={errors.responsable ? "true" : "false"}
+                  aria-describedby={
+                    errors.responsable ? "responsable-error" : undefined
+                  }
+                  required
+                >
+                  <option value="">Seleccionar responsable</option>
+                  {RESPONSABLES_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.responsable && (
+                  <p
+                    className="mt-1 text-sm text-red-600"
+                    id="responsable-error"
+                  >
+                    {errors.responsable}
                   </p>
                 )}
               </div>

@@ -38,8 +38,7 @@ export function useCreateReport() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ reportData, userEmail }) =>
-      createReport(reportData, userEmail),
+    mutationFn: ({ reportData }) => createReport(reportData),
     onSuccess: (data) => {
       // Agregar el nuevo reporte a la caché
       queryClient.setQueryData(reportKeys.detail(data.id), data);
