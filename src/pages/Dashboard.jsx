@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   FileText,
   Eye,
@@ -24,7 +24,6 @@ function Dashboard() {
   const [exporting, setExporting] = useState(false);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingReportId, setDownloadingReportId] = useState(null);
-  const navigate = useNavigate();
   const { addToast } = useToast();
 
   // Usar el hook de React Query para obtener los reportes
@@ -33,7 +32,7 @@ function Dashboard() {
   const filteredReports = reports.filter(
     (report) =>
       report.nro_consulta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.cliente?.toLowerCase().includes(searchTerm.toLowerCase())
+      report.cliente?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // Función para formatear la fecha de Firestore
@@ -115,7 +114,7 @@ function Dashboard() {
           duration: 5000,
         });
         setExporting(false);
-      }
+      },
     );
   };
 
@@ -171,7 +170,7 @@ function Dashboard() {
       <div className="ml-2 flex-shrink-0 flex">
         <p
           className={`px-2 inline-flex items-center text-xs leading-5 rounded-full ${getRatingColor(
-            rating.rating
+            rating.rating,
           )}`}
         >
           <Star className="h-3 w-3 mr-1" />
@@ -333,15 +332,15 @@ function Dashboard() {
                             report.estado === "atendido"
                               ? "bg-green-100 text-green-800"
                               : report.estado === "derivado"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
                           }`}
                         >
                           {report.estado === "atendido"
                             ? "Atendido"
                             : report.estado === "derivado"
-                            ? "Derivado"
-                            : "No atendido"}
+                              ? "Derivado"
+                              : "No atendido"}
                         </p>
                       </div>
 

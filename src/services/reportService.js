@@ -24,7 +24,7 @@ async function generateConsultationNumber() {
     collection(db, REPORTS_COLLECTION),
     where("nro_consulta", ">=", `CPU-001-${currentYear}`),
     where("nro_consulta", "<=", `CPU-999-${currentYear}`),
-    orderBy("nro_consulta", "desc")
+    orderBy("nro_consulta", "desc"),
   );
 
   try {
@@ -125,7 +125,10 @@ export async function getAllReports() {
   try {
     const q = query(
       collection(db, REPORTS_COLLECTION),
-      orderBy("created_at", "desc")
+      //solo 2026
+      where("created_at", ">=", Timestamp.fromDate(new Date(2026, 0, 1))),
+      where("created_at", "<=", Timestamp.fromDate(new Date(2026, 11, 31))),
+      orderBy("created_at", "desc"),
     );
 
     const querySnapshot = await getDocs(q);
