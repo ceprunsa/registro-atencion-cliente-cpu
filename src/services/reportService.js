@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   where,
   Timestamp,
+  getCountFromServer,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
@@ -20,25 +21,20 @@ async function generateConsultationNumber() {
   const currentYear = new Date().getFullYear();
 
   // Obtener el último número de consulta para este año
-  const q = query(
-    collection(db, REPORTS_COLLECTION),
-    where("nro_consulta", ">=", `CPU-001-${currentYear}`),
-    where("nro_consulta", "<=", `CPU-999-${currentYear}`),
-    orderBy("nro_consulta", "desc"),
-  );
+  const coll = collection(db, REPORTS_COLLECTION);
+  const snapshot = await getCountFromServer(coll);
 
   try {
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
+    if (snapshot.data().count === 0) {
       // No hay consultas para este año, comenzar desde 001
       return `CPU-001-${currentYear}`;
     }
 
     // Obtener el último número y aumentarlo en 1
-    const lastNumber = querySnapshot.docs[0].data().nro_consulta;
-    const lastNumberPart = Number.parseInt(lastNumber.split("-")[1]);
-    const newNumberPart = (lastNumberPart + 1).toString().padStart(3, "0");
+    const lastNumber = snapshot.data().count;
+    console.log("Último número de consulta:", lastNumber);
+    const newNumberPart = (lastNumber + 1).toString().padStart(3, "0");
+    console.log("Nuevo número de consulta:", newNumberPart);
 
     return `CPU-${newNumberPart}-${currentYear}`;
   } catch (error) {
@@ -125,11 +121,12 @@ export async function getAllReports() {
   try {
     const q = query(
       collection(db, REPORTS_COLLECTION),
-      //solo 2026
-      where("created_at", ">=", Timestamp.fromDate(new Date(2026, 0, 1))),
+      //solo 2026 marzo a diciembre
+      where("created_at", ">=", Timestamp.fromDate(new Date(2026, 2, 1))),
       where("created_at", "<=", Timestamp.fromDate(new Date(2026, 11, 31))),
       orderBy("created_at", "desc"),
     );
+    //obtener la cantidad de informes
 
     const querySnapshot = await getDocs(q);
     const reports = querySnapshot.docs.map((doc) => ({

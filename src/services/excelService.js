@@ -184,7 +184,7 @@ export const exportReportsToExcel = async (reports, onSuccess, onError) => {
       } catch (error) {
         console.error(
           `Error al cargar calificación para informe ${report.id}:`,
-          error
+          error,
         );
       }
     }
